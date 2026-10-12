@@ -22,7 +22,7 @@ spec:
             - matchExpressions:
               - key: node-type
                 operator: In
-                values: [ops, all]
+                values: [ops]
       securityContext:
         fsGroup: 0
       # InitContainer para configurar permisos del volumen
@@ -74,10 +74,10 @@ spec:
           timeoutSeconds: 5
         resources:
           requests:
-            memory: "768Mi"
+            memory: "2Gi"
             cpu: "500m"
           limits:
-            memory: "1.5Gi"
+            memory: "2Gi"
             cpu: "1000m"
       volumes:
       - name: sql-storage

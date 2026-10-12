@@ -15,7 +15,7 @@ fi
 
 # Verificar que minikube está corriendo
 if ! minikube status &> /dev/null; then
-    echo "Error: Minikube no está corriendo. Ejecuta: minikube start --nodes 3"
+    echo "Error: Minikube no está corriendo. Prepara primero el cluster multinodo siguiendo README-k8s.md."
     exit 1
 fi
 

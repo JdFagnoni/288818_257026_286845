@@ -10,29 +10,24 @@ if (-not (Get-Command kubectl -ErrorAction SilentlyContinue)) {
 }
 
 # Verificar que el cluster Kubernetes está accesible
-$nodes = kubectl get nodes -o jsonpath='{.items[*].metadata.name}' 2>&1
+$nodes = kubectl get nodes --request-timeout=10s -o jsonpath='{.items[*].metadata.name}' 2>&1
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrEmpty($nodes)) {
-    Write-Host "Error: No hay cluster Kubernetes accesible. Si usas Minikube: minikube start (o minikube start --nodes 3)" -ForegroundColor Red
+    Write-Host "Error: kubectl no puede acceder a un cluster Kubernetes. Verifica el contexto actual con: kubectl config current-context" -ForegroundColor Red
     exit 1
 }
 
-# Etiquetar nodos (requerido para que los pods de telemetría se programen)
-Write-Host "`n1. Etiquetando nodos..." -ForegroundColor Yellow
-$nodeList = $nodes.Trim().Split(" ", [StringSplitOptions]::RemoveEmptyEntries)
-if ($nodeList.Count -eq 1) {
-    Write-Host "   Cluster de 1 nodo detectado. Etiquetando $($nodeList[0]) con node-type=all" -ForegroundColor Cyan
-    kubectl label nodes $nodeList[0] node-type=all --overwrite 2>$null
-} elseif ($nodeList.Count -ge 3) {
-    Write-Host "   Cluster multi-nodo detectado. Etiquetando nodos..." -ForegroundColor Cyan
-    kubectl label nodes minikube node-type=frontend --overwrite 2>$null
-    kubectl label nodes minikube-m02 node-type=backend --overwrite 2>$null
-    kubectl label nodes minikube-m03 node-type=ops --overwrite 2>$null
-} else {
-    $firstNode = $nodeList[0]
-    Write-Host "   Etiquetando nodo $firstNode con node-type=all (compatibilidad)" -ForegroundColor Cyan
-    kubectl label nodes $firstNode node-type=all --overwrite 2>$null
+$backendReady = kubectl get nodes -l node-type=backend -o jsonpath='{range .items[*]}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}'
+$opsReady = kubectl get nodes -l node-type=ops -o jsonpath='{range .items[*]}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}'
+$backendCount = @($backendReady -split '\s+' | Where-Object { $_ -eq 'True' }).Count
+$opsCount = @($opsReady -split '\s+' | Where-Object { $_ -eq 'True' }).Count
+if ($backendCount -lt 3 -or $opsCount -ne 1) {
+    Write-Host "Error: Se requieren al menos 3 nodos Ready con node-type=backend y exactamente 1 con node-type=ops." -ForegroundColor Red
+    Write-Host "Configura las etiquetas siguiendo README-k8s.md antes de desplegar." -ForegroundColor Yellow
+    exit 1
 }
-Write-Host "   Verificar: kubectl get nodes --show-labels" -ForegroundColor Gray
+
+Write-Host "`nPools de nodos configurados:" -ForegroundColor Cyan
+kubectl get nodes -L node-type
 
 Write-Host "`n2. Creando namespace..." -ForegroundColor Yellow
 kubectl apply -f namespace.yaml

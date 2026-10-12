@@ -13,7 +13,7 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
 # Verificar que minikube está corriendo
 $minikubeStatus = minikube status 2>&1
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Error: Minikube no está corriendo. Ejecuta: minikube start --nodes 3" -ForegroundColor Red
+    Write-Host "Error: Minikube no está corriendo. Prepara primero el cluster multinodo siguiendo README-k8s.md." -ForegroundColor Red
     exit 1
 }
 

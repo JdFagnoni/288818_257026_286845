@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script de despliegue para Kubernetes (Minikube)
+# Script de despliegue para Kubernetes
 # Uso: ./apply-k8s.sh
 
 set -e
@@ -12,33 +12,33 @@ if ! command -v kubectl &> /dev/null; then
     exit 1
 fi
 
-# Verificar que minikube está corriendo
-if ! minikube status &> /dev/null; then
-    echo "Error: Minikube no está corriendo."
-    echo "Ejecuta: minikube start --memory=6144 --cpus=4"
+# Verificar que el contexto de kubectl está conectado
+if ! kubectl get nodes --request-timeout=10s >/dev/null 2>&1; then
+    echo "Error: kubectl no puede acceder a un cluster Kubernetes."
+    echo "Verifica el contexto actual con: kubectl config current-context"
+    exit 1
+fi
+
+backend_count=$(kubectl get nodes -l node-type=backend --no-headers 2>/dev/null | awk '$2 == "Ready" {count++} END {print count+0}')
+ops_count=$(kubectl get nodes -l node-type=ops --no-headers 2>/dev/null | awk '$2 == "Ready" {count++} END {print count+0}')
+if [ "$backend_count" -lt 3 ] || [ "$ops_count" -ne 1 ]; then
+    echo "Error: node pools are not configured for this deployment."
+    echo "Need at least 3 Ready nodes labeled node-type=backend and exactly 1 Ready node labeled node-type=ops."
+    echo "Run ./configure-nodes.sh OPS_NODE GATEWAY_NODE USERS_NODE PHARMACY_NODE"
+    echo "See README-k8s.md for the topology and node requirements."
     exit 1
 fi
 
 echo ""
-echo "1. Etiquetando nodo (requerido para que los pods se programen)..."
-NODE_NAME=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-if [ -n "$NODE_NAME" ]; then
-    kubectl label nodes $NODE_NAME node-type=all --overwrite 2>/dev/null || true
-    echo "   Nodo $NODE_NAME etiquetado con node-type=all"
-else
-    echo "   No se pudo obtener el nombre del nodo. Continuando..."
-fi
-
-echo ""
-echo "2. Creando namespace..."
+echo "1. Creando namespace..."
 kubectl apply -f namespace.yaml
 
 echo ""
-echo "3. Creando secrets..."
+echo "2. Creando secrets..."
 kubectl apply -f secrets/db-secret.yaml
 
 echo ""
-echo "4. Creando configmaps..."
+echo "3. Creando configmaps..."
 kubectl apply -f configmaps/prometheus-config.yaml
 kubectl apply -f configmaps/otel-collector-config.yaml
 kubectl apply -f configmaps/grafana-provisioning.yaml
@@ -47,7 +47,7 @@ kubectl apply -f configmaps/grafana-dashboard-infra.yaml
 kubectl apply -f configmaps/fluent-bit-config.yaml
 
 echo ""
-echo "5. Creando StorageClass y PersistentVolumes..."
+echo "4. Creando StorageClass y PersistentVolumes..."
 kubectl apply -f persistent-volumes/storage-class.yaml
 
 # Eliminar solo PVs en estado Released (huérfanos tras borrar el namespace).
@@ -67,7 +67,7 @@ kubectl apply -f persistent-volumes/prometheus-pv.yaml
 kubectl apply -f persistent-volumes/grafana-pv.yaml
 
 echo ""
-echo "6. Desplegando base de datos..."
+echo "5. Desplegando base de datos..."
 kubectl apply -f services/ops/db-service.yaml
 kubectl apply -f deployments/ops/db-deployment.yaml
 
@@ -90,7 +90,7 @@ if [ $timeout -ge $max_timeout ]; then
 fi
 
 echo ""
-echo "7. Desplegando servicios de observabilidad..."
+echo "6. Desplegando servicios de observabilidad..."
 # Elasticsearch primero
 kubectl apply -f services/ops/elasticsearch-service.yaml
 kubectl apply -f deployments/ops/elasticsearch-deployment.yaml
@@ -138,7 +138,7 @@ kubectl apply -f deployments/ops/fluent-bit-clusterrolebinding.yaml
 kubectl apply -f deployments/ops/fluent-bit-daemonset.yaml
 
 echo ""
-echo "8. Desplegando servicios backend..."
+echo "7. Desplegando servicios backend..."
 kubectl apply -f services/backend/users-service-service.yaml
 kubectl apply -f deployments/backend/users-service-deployment.yaml
 
@@ -149,7 +149,7 @@ kubectl apply -f services/backend/api-gateway-service.yaml
 kubectl apply -f deployments/backend/api-gateway-deployment.yaml
 
 echo ""
-echo "9. Desplegando frontend..."
+echo "8. Desplegando frontend..."
 kubectl apply -f services/frontend/ui-service.yaml
 kubectl apply -f deployments/frontend/ui-deployment.yaml
 
@@ -160,12 +160,14 @@ echo "Verificando estado de los pods..."
 kubectl get pods -n pharmago -o wide
 
 echo ""
-echo "Para acceder a los servicios (usa 127.0.0.1 en Windows):"
+echo "Para acceder a los servicios:"
 echo "  ./port-forward.sh"
 echo ""
-echo "O con minikube service:"
-echo "  Frontend:     minikube service pharmago-ui -n pharmago --url"
-echo "  Grafana:      minikube service grafana -n pharmago --url"
-echo "  Kibana:       minikube service kibana -n pharmago --url"
-echo "  Prometheus:   minikube service prometheus -n pharmago --url"
+if command -v minikube >/dev/null 2>&1; then
+    echo "O con minikube service:"
+    echo "  Frontend:     minikube service pharmago-ui -n pharmago --url"
+    echo "  Grafana:      minikube service grafana -n pharmago --url"
+    echo "  Kibana:       minikube service kibana -n pharmago --url"
+    echo "  Prometheus:   minikube service prometheus -n pharmago --url"
+fi
 

@@ -20,7 +20,7 @@ spec:
             - matchExpressions:
               - key: node-type
                 operator: In
-                values: [frontend, all]
+                values: [backend]
       containers:
       - name: pharmago-ui
         image: pharmago-ui:latest

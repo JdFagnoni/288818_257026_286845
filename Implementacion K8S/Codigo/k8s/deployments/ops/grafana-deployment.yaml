@@ -20,7 +20,7 @@ spec:
             - matchExpressions:
               - key: node-type
                 operator: In
-                values: [ops, all]
+                values: [ops]
       securityContext:
         fsGroup: 0
       initContainers:

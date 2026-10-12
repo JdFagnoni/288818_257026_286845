@@ -20,7 +20,7 @@ spec:
             - matchExpressions:
               - key: node-type
                 operator: In
-                values: [ops, all]
+                values: [ops]
       containers:
       - name: otlp-collector
         image: otel/opentelemetry-collector-contrib:latest
