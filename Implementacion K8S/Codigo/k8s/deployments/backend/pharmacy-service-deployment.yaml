@@ -4,7 +4,7 @@ metadata:
   name: pharmago-pharmacy-service
   namespace: pharmago
 spec:
-  replicas: 1
+  replicas: 2
   strategy:
     type: Recreate
   selector:
@@ -24,11 +24,25 @@ spec:
               - key: node-type
                 operator: In
                 values: [backend]
+        # Dos microservicios distintos nunca comparten nodo.
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
+              matchExpressions:
+              - key: workload-class
+                operator: In
+                values: [pharmago-backend-microservice]
+              - key: app
+                operator: NotIn
+                values: [pharmago-pharmacy-service]
+            topologyKey: kubernetes.io/hostname
+        # Las réplicas de este servicio van juntas a su propio nodo: si se
+        # repartieran, ocuparían el nodo de otro microservicio.
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
               matchLabels:
-                workload-class: pharmago-backend-microservice
+                app: pharmago-pharmacy-service
             topologyKey: kubernetes.io/hostname
       containers:
       - name: pharmago-pharmacy-service
