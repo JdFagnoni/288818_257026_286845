@@ -1,0 +1,17 @@
+# Normaliza fines de línea en el repo (LF en el índice) sin depender de core.autocrlf
+* text=auto
+
+# Scripts que se ejecutan en bash / dentro de nodos Linux: siempre LF
+*.sh   text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
+Dockerfile text eol=lf
+
+# Scripts de PowerShell: CRLF en el working tree
+*.ps1  text eol=crlf
+
+# Binarios
+*.bak  binary
+*.png  binary
+*.jpg  binary
+*.ico  binary
