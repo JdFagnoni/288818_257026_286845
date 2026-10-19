@@ -9,6 +9,7 @@ using PharmaGo.Domain.Entities;
 using PharmaGo.PharmacyService.IBusinessLogic;
 using PharmaGo.IDataAccess;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using InstrumentationInterface;
 using Instrumentation;
 
@@ -61,6 +62,31 @@ namespace PharmaGo.PharmacyService.Factory
             });
             serviceCollection.AddSingleton<ICustomMetrics, CustomMetrics>();
             serviceCollection.AddSingleton<IStructuredLogger, StructuredLogger>();
+        }
+
+        // Construye el modelo de EF Core y abre la primera conexión del pool antes de
+        // que la app escuche: así la startup probe deja al pod fuera del Service hasta
+        // que responde con latencia normal. Sin esto, la primera consulta de cada pod
+        // nuevo tarda ~3s.
+        public static IHost WarmUpDatabase(this IHost host)
+        {
+            using (var scope = host.Services.CreateScope())
+            {
+                try
+                {
+                    var dbContext = scope.ServiceProvider.GetRequiredService<DbContext>();
+                    dbContext.Set<Drug>().AsNoTracking().Any();
+                }
+                catch (Exception ex)
+                {
+                    // Arranca igual: los requests que usan la BD fallan hasta que esté
+                    // disponible, como pasaba antes de agregar el warm-up.
+                    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(WarmUpDatabase));
+                    logger.LogWarning(ex, "Database warm-up failed");
+                }
+            }
+
+            return host;
         }
 
     }

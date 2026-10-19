@@ -34,6 +34,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.WarmUpDatabase();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
