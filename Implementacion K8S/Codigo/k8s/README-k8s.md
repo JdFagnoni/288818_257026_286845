@@ -4,12 +4,14 @@ Esta guía despliega PharmaGo en un cluster multinodo. Para el primer requisito 
 
 ## Topología requerida
 
-- **3 nodos `backend`**: uno para cada Deployment de microservicio (`api-gateway`, `users-service`, `pharmacy-service`). La afinidad obligatoria impide que dos Pods de esos Deployments compartan el mismo hostname Kubernetes.
+- **3 nodos `backend`**: uno por microservicio (`api-gateway`, `users-service`, `pharmacy-service`). Cada microservicio corre 2 réplicas y las dos van juntas a su nodo. La anti-afinidad obligatoria impide que Pods de microservicios distintos compartan el mismo hostname Kubernetes.
 - **1 nodo `ops`**: base de datos, componentes de observabilidad y los PersistentVolumes locales.
 - **UI**: puede ejecutarse en cualquiera de los nodos `backend`; no cuenta como uno de los tres microservicios backend.
 - **Node Exporter y Fluent Bit**: DaemonSets que se ejecutan por nodo para observar infraestructura y recoger logs.
 
-Las tres Deployments backend usan estrategia `Recreate`: con exactamente tres nodos backend no hay un cuarto hostname libre donde colocar temporalmente un Pod durante un rolling update. Al actualizar un servicio, su Pod se recrea y ese servicio puede tener una breve interrupción.
+Las tres Deployments backend se actualizan con `RollingUpdate` (`maxSurge: 1`, `maxUnavailable: 0`): primero se levanta un Pod nuevo en el nodo del servicio y recién cuando está `Ready` se baja uno viejo, así que el servicio nunca queda con menos de 2 réplicas. Ver [Despliegue sin caída](#despliegue-sin-caída).
+
+Las dos réplicas de un servicio comparten nodo: cubren la falla de un Pod y los despliegues, no la caída de ese nodo. Repartirlas exigiría nodos backend extra, porque cada nodo aloja un solo microservicio.
 
 Los cuatro nodos de trabajo deben estar `Ready`, ser schedulable y no tener taints `NoSchedule` / `NoExecute` no tolerados. Los manifests usan etiquetas de nodo y hostname, así que prueban separación entre **nodos Kubernetes**. Si la cátedra interpreta “nodos físicos” literalmente, cada nodo debe ejecutarse en un host físico diferente; varios nodos Minikube en una laptop comparten el mismo host físico y solo demuestran separación lógica.
 
@@ -167,7 +169,38 @@ kubectl get nodes -L node-type
 kubectl get pods -n pharmago -l 'workload-class=pharmago-backend-microservice' -o wide
 ```
 
-En la salida del último comando, cada uno de los tres Pods backend debe mostrar un valor distinto en la columna `NODE`. Guarda esta salida como evidencia del requisito junto con el diagrama de despliegue de `deployment-diagram.md`.
+En la salida del último comando, las 2 réplicas de cada microservicio comparten el valor de la columna `NODE` y cada microservicio aparece en un nodo distinto. Guarda esta salida como evidencia del requisito junto con el diagrama de despliegue de `deployment-diagram.md`.
+
+## Despliegue sin caída
+
+Cada microservicio backend se reemplaza sin cortar el servicio gracias a:
+
+- **`RollingUpdate`** con `maxSurge: 1` y `maxUnavailable: 0`, más `minReadySeconds: 5`: siempre hay 2 réplicas listas mientras se reemplazan.
+- **Probes `httpGet /health`**: el Service solo envía tráfico a Pods que responden.
+- **`preStop` de 5 segundos**: Kubernetes saca al Pod del Service y le envía SIGTERM al mismo tiempo. La pausa deja que el Pod siga atendiendo hasta que kube-proxy deja de enrutarle requests.
+- **Warm-up de pharmacy**: el servicio hace una consulta a la BD antes de empezar a escuchar, así que no queda `Ready` hasta poder responder con latencia normal. Sin esto, la primera consulta de cada Pod nuevo tardaba ~3s.
+
+Para comprobarlo:
+
+```bash
+cd k8s
+./test-zero-downtime.sh                          # reemplaza gateway, users y pharmacy
+./test-zero-downtime.sh pharmago-users-service   # o solo los que indiques
+```
+
+El script lanza un Pod dentro del cluster que consulta el gateway sin parar (gateway solo, gateway → users y gateway → pharmacy → BD), reinicia los deployments y reporta los requests fallidos. Corre dentro del cluster porque `kubectl port-forward` se ata a un solo Pod y se corta cuando ese Pod se reemplaza. El resultado esperado es `Fallidos: 0`.
+
+### Migrar un cluster con la versión anterior
+
+Si el cluster tiene los deployments backend anteriores (anti-afinidad entre todos los backend y estrategia `Recreate`), los Pods viejos rechazan a los nuevos en su nodo y el rollout queda `Pending`. Hay que recrearlos una vez, con una interrupción breve:
+
+```bash
+kubectl delete -f deployments/backend/
+kubectl wait --for=delete pod -l workload-class=pharmago-backend-microservice -n pharmago --timeout=120s
+kubectl apply -f deployments/backend/
+```
+
+Esperar a que los Pods viejos desaparezcan antes del `apply` es necesario: si todavía existe uno, la afinidad obliga a los nuevos a ir a su nodo, y el scheduler puede tardar hasta 5 minutos en reintentar.
 
 ### Ver servicios
 
@@ -250,7 +283,7 @@ Luego aplica los cambios:
 kubectl apply -f deployments/<component>/<deployment>.yaml
 ```
 
-Si aumentas réplicas de los microservicios backend, agrega nodos `backend` adicionales: por la regla anti-affinity, cada Pod con `workload-class=pharmago-backend-microservice` necesita un hostname propio.
+Las réplicas de un microservicio backend van todas al mismo nodo (afinidad con su propio `app`), así que subirlas no requiere nodos nuevos, solo memoria disponible en ese nodo.
 
 ## Troubleshooting
 
@@ -287,6 +320,17 @@ Si los pods fallan con `ImagePullBackOff`:
    ```
 
 3. Verificar que los deployments usan `imagePullPolicy: Never` (ya configurado).
+
+### El Pod sigue con el código anterior después de reconstruir
+
+`minikube image load` no reemplaza una imagen `:latest` que un contenedor está usando en ese nodo. Si después de `build-images.sh` el Pod nuevo corre el código anterior (o un rollout no llega a `Ready`), cargá la imagen directamente en cada nodo. Con el driver docker, los nodos son contenedores del host:
+
+```bash
+for n in $(kubectl get nodes -o name | cut -d/ -f2); do
+  docker save pharmago-api-gateway:latest | docker exec -i "$n" docker load
+done
+kubectl rollout restart deployment/pharmago-api-gateway -n pharmago
+```
 
 ### Base de datos no está lista
 
@@ -475,7 +519,9 @@ k8s/
 │       ├── elasticsearch-service.yaml
 │       └── kibana-service.yaml
 ├── build-images.sh
+├── configure-nodes.sh
 ├── apply-k8s.sh
+├── test-zero-downtime.sh
 ├── cleanup.sh
 └── README-k8s.md
 ```

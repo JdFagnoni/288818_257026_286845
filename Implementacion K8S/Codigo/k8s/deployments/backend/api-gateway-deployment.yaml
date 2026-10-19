@@ -4,9 +4,15 @@ metadata:
   name: pharmago-api-gateway
   namespace: pharmago
 spec:
-  replicas: 1
+  replicas: 2
+  # Reemplazo sin caída: primero se levanta un pod nuevo y recién cuando está
+  # Ready se baja uno viejo.
+  minReadySeconds: 5
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: pharmago-api-gateway
@@ -24,11 +30,25 @@ spec:
               - key: node-type
                 operator: In
                 values: [backend]
+        # Dos microservicios distintos nunca comparten nodo.
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
+              matchExpressions:
+              - key: workload-class
+                operator: In
+                values: [pharmago-backend-microservice]
+              - key: app
+                operator: NotIn
+                values: [pharmago-api-gateway]
+            topologyKey: kubernetes.io/hostname
+        # Las réplicas de este servicio van juntas a su propio nodo: si se
+        # repartieran, ocuparían el nodo de otro microservicio.
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
               matchLabels:
-                workload-class: pharmago-backend-microservice
+                app: pharmago-api-gateway
             topologyKey: kubernetes.io/hostname
       containers:
       - name: pharmago-api-gateway
@@ -47,22 +67,30 @@ spec:
           limits:
             memory: "384Mi"
             cpu: "500m"
+        # El pod sigue atendiendo mientras el Service deja de mandarle tráfico;
+        # sin esta pausa se pierden requests al bajarlo.
+        lifecycle:
+          preStop:
+            exec:
+              command: ["sleep", "5"]
         startupProbe:
-          tcpSocket:
+          httpGet:
+            path: /health
             port: 80
-          initialDelaySeconds: 15
-          periodSeconds: 10
-          failureThreshold: 15
+          periodSeconds: 2
+          failureThreshold: 60
         readinessProbe:
-          tcpSocket:
+          httpGet:
+            path: /health
             port: 80
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          timeoutSeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 2
         livenessProbe:
-          tcpSocket:
+          httpGet:
+            path: /health
             port: 80
-          initialDelaySeconds: 60
-          periodSeconds: 30
-          timeoutSeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
 

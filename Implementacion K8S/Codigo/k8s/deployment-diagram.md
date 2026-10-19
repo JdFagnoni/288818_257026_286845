@@ -13,17 +13,17 @@ flowchart LR
 
     subgraph Backend1[Backend node 1 · node-type=backend]
         UI[pharmago-ui Pod]
-        Gateway[API Gateway Pod]
+        Gateway[API Gateway Pods ×2]
         NE1[Node Exporter DaemonSet Pod]
         FB1[Fluent Bit DaemonSet Pod]
     end
     subgraph Backend2[Backend node 2 · node-type=backend]
-        Users[Users Service Pod]
+        Users[Users Service Pods ×2]
         NE2[Node Exporter DaemonSet Pod]
         FB2[Fluent Bit DaemonSet Pod]
     end
     subgraph Backend3[Backend node 3 · node-type=backend]
-        Pharmacy[Pharmacy Service Pod]
+        Pharmacy[Pharmacy Service Pods ×2]
         NE3[Node Exporter DaemonSet Pod]
         FB3[Fluent Bit DaemonSet Pod]
     end
@@ -61,4 +61,4 @@ flowchart LR
     ES --> Kibana
 ```
 
-The hard Pod anti-affinity rule applies to the three backend microservices using `kubernetes.io/hostname`. The diagram shows Kubernetes node separation. Multiple Minikube nodes on one laptop are still backed by one physical machine; use separate physical hosts if the grading requirement demands physical-machine separation.
+A required Pod anti-affinity rule keeps different backend microservices on different `kubernetes.io/hostname` values, and a required Pod affinity keeps the two replicas of each microservice together on its node. The diagram shows Kubernetes node separation. Multiple Minikube nodes on one laptop are still backed by one physical machine; use separate physical hosts if the grading requirement demands physical-machine separation.
