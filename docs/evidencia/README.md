@@ -33,6 +33,12 @@ La topología del cluster en esta versión (nodos y pods) está en [01-plataform
 
 | Archivo | Qué muestra | Fecha |
 |---|---|---|
+| [01-grafana-overview-superior.png](00-linea-base/01-grafana-overview-superior.png) | Dashboard *PharmaGo - Overview*: peticiones por segundo, latencia promedio, tasa de error (0 %) y throughput total. `/health` tiene la mayor tasa porque incluye las probes de Kubernetes. | 2026-10-21 |
+| [02-grafana-overview-inferior.png](00-linea-base/02-grafana-overview-inferior.png) | Resto del Overview: sin errores 429 ni errores en `/api/drug`. *Distribución de Status Codes* muestra "No data" por un error en la consulta del dashboard (divide series con y sin la etiqueta `status_code`); se corrige en el ítem 4. | 2026-10-21 |
+| [03-grafana-infra-pods.png](00-linea-base/03-grafana-infra-pods.png) | Dashboard *PharmaGo - Infra*: disco disponible, y CPU y memoria por pod. Los paneles de nodo muestran una sola serie (`node-exporter:9100`) porque node-exporter se scrapea a través de un Service y mezcla los 4 nodos; se corrige en el ítem 4. | 2026-10-21 |
+| [04-kibana-logs-backend.png](00-linea-base/04-kibana-logs-backend.png) | Logs del backend en Kibana (últimos 15 min). Todos son del gateway y están en texto plano con códigos de color de consola, no en JSON; users y pharmacy no registran logs por request. Ambas cosas se resuelven en el ítem 4. | 2026-10-21 |
+| [05-kibana-logs-pharmacy-json.png](00-linea-base/05-kibana-logs-pharmacy-json.png) | Logs de pharmacy (últimas 24 h): son JSON estructurado, por eso Kibana separa `LogLevel` y `Message` en campos. Solo aparecen los del arranque. | 2026-10-21 |
+| [06-metricas-linea-base.txt](00-linea-base/06-metricas-linea-base.txt) | Valores de referencia de los últimos 15 minutos sacados de Prometheus: tráfico, latencia promedio y p95 por endpoint, tasa de error, CPU y memoria de nodo y de cada pod del backend, con las consultas PromQL usadas. Sirve para fijar los umbrales de las alertas. | 2026-10-21 |
 
 ### 01 · Plataforma
 
@@ -40,4 +46,18 @@ El requisito de que los microservicios no compartan "nodos físicos" se cumple c
 
 | Archivo | Qué muestra | Fecha |
 |---|---|---|
-| [01-nodos-y-pods.png](01-plataforma/01-nodos-y-pods.png) | Los 4 nodos con su rol (`node-type`: 1 `ops` y 3 `backend`) y todos los pods del namespace `pharmago`, con el nodo donde corre cada uno. Cada microservicio tiene sus 2 réplicas en un nodo propio. | 2026-10-21 |
+| [01-nodos-y-pods.png](01-plataforma/01-nodos-y-pods.png) | Los 4 nodos con su rol (`node-type`: 1 `ops` y 3 `backend`) y todos los pods del namespace `pharmago`, con el nodo donde corre cada uno. Cada microservicio tiene sus 2 réplicas en un nodo propio. Cluster de 4 nodos (IPs `192.168.58.x`). | 2026-10-21 |
+| [02-diagrama-despliegue.png](01-plataforma/02-diagrama-despliegue.png) | Diagrama de despliegue generado desde [deployment-diagram.md](../../Implementacion%20K8S/Codigo/k8s/deployment-diagram.md): servicios, pods por nodo, DaemonSets y flujos de telemetría y logs. Muestra la ubicación observada en otro cluster del equipo, de 5 nodos (IPs `192.168.49.x`); por eso los nodos no coinciden con la captura anterior. En los dos se cumple la regla: cada microservicio en un nodo distinto. | 2026-10-21 |
+
+### 03 · Despliegues seguros
+
+Técnica: rolling update (`maxSurge: 1`, `maxUnavailable: 0`, `minReadySeconds: 5`), `preStop` de 5 s, probes `httpGet /health` y warm-up de la base en pharmacy. La explicación está en [README-k8s.md, sección "Despliegue sin caída"](../../Implementacion%20K8S/Codigo/k8s/README-k8s.md#despliegue-sin-caída). Versión: `main` en `6b996db`, con el mismo tráfico de fondo que la línea base.
+
+| Archivo | Qué muestra | Fecha |
+|---|---|---|
+| [01-test-zero-downtime.txt](03-despliegues-seguros/01-test-zero-downtime.txt) | Salida de `test-zero-downtime.sh` reemplazando gateway, users y pharmacy, uno tras otro: 164 requests, 0 fallidos (100 % de disponibilidad). | 2026-10-21 |
+| [02-pods-durante-rollout.txt](03-despliegues-seguros/02-pods-durante-rollout.txt) | Eventos de los pods del backend con la hora de cada cambio. En cada servicio, el pod nuevo queda `Ready` antes de que empiece a terminar uno viejo, siempre en el nodo de ese servicio. | 2026-10-21 |
+| [03-grafana-overview-rollout-superior.png](03-despliegues-seguros/03-grafana-overview-rollout-superior.png) | Overview durante los rollouts (18:45 a 18:47): el tráfico sigue sin cortes y la tasa de error se mantiene en 0 %. La latencia de `/api/drug` sube hasta ~35 ms mientras se reemplaza pharmacy, por las primeras consultas en los pods nuevos, sin errores. | 2026-10-21 |
+| [04-grafana-overview-rollout-inferior.png](03-despliegues-seguros/04-grafana-overview-rollout-inferior.png) | Resto del Overview: ni errores 429 ni errores en `/api/drug` durante los rollouts. | 2026-10-21 |
+| [05-grafana-infra-rollout-nodo.png](03-despliegues-seguros/05-grafana-infra-rollout-nodo.png) | Infra: CPU y memoria de nodo estables antes y durante los rollouts (serie única; ver la limitación en la línea base). | 2026-10-21 |
+| [06-grafana-infra-rollout-pods.png](03-despliegues-seguros/06-grafana-infra-rollout-pods.png) | Infra: disco, CPU y memoria por pod. Reemplazar los pods no genera picos de recursos. | 2026-10-21 |

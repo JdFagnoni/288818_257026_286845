@@ -1,0 +1,61 @@
+# Línea base: métricas de referencia
+
+Fecha: 2026-10-21 18:44 (UTC-3) · Ventana: últimos 15m · Fuente: Prometheus
+Versión: main en 6b996db (ítems 1 y 3 aplicados)
+Tráfico: 1 request cada 4 s al gateway, rotando /api/drug, /api/pharmacy y /test-health (pod baseline-traffic)
+
+## Tráfico por endpoint (req/s)
+  /health incluye las probes de Kubernetes: 4 pods (users y pharmacy, x2) a ~0.3 req/s cada uno.
+  /api/drug                                        0.084
+  /api/pharmacy                                    0.084
+  /health                                          1.291
+  /metrics                                         0.402
+
+## Latencia promedio por endpoint (ms)
+  /api/drug                                        3.74
+  /api/pharmacy                                    4.31
+  /health                                          0.10
+  /metrics                                         2.03
+
+## Latencia p95 por endpoint (ms)
+  /api/drug                                        7.81
+  /api/pharmacy                                    13.75
+  /health                                          4.76
+  /metrics                                         4.84
+
+## Tasa de error total (%)
+  total                                            0.00
+
+## CPU de nodo (%)
+  Limitación: node-exporter se scrapea a través de un Service, así que es una sola serie que mezcla los 4 nodos (issue #6).
+  node-exporter:9100                               9.6
+
+## Memoria usada de nodo (%)
+  Misma limitación que la CPU de nodo.
+  node-exporter:9100                               70.1
+
+## CPU por pod del backend (% de un core)
+  pharmago-api-gateway-6dfddddd9f-52xbz            0.30
+  pharmago-api-gateway-6dfddddd9f-cgl4l            0.37
+  pharmago-pharmacy-service-776c4f9bc-87hqf        0.22
+  pharmago-pharmacy-service-776c4f9bc-r8j9c        0.24
+  pharmago-users-service-6f7bbf8555-842fg          0.29
+  pharmago-users-service-6f7bbf8555-jzfdv          0.17
+
+## Memoria por pod del backend (MiB)
+  pharmago-api-gateway-6dfddddd9f-52xbz            56.0
+  pharmago-api-gateway-6dfddddd9f-cgl4l            58.3
+  pharmago-pharmacy-service-776c4f9bc-87hqf        92.1
+  pharmago-pharmacy-service-776c4f9bc-r8j9c        85.6
+  pharmago-users-service-6f7bbf8555-842fg          76.1
+  pharmago-users-service-6f7bbf8555-jzfdv          74.6
+
+## Consultas PromQL usadas
+- Tráfico por endpoint (req/s): sum by (endpoint) (rate(pharmago_http_requests_total[15m]))
+- Latencia promedio por endpoint (ms): sum by (endpoint) (rate(pharmago_http_request_duration_milliseconds_sum[15m])) / sum by (endpoint) (rate(pharmago_http_request_duration_milliseconds_count[15m]))
+- Latencia p95 por endpoint (ms): histogram_quantile(0.95, sum by (le, endpoint) (rate(pharmago_http_request_duration_milliseconds_bucket[15m])))
+- Tasa de error total (%): (sum(rate(pharmago_http_errors_total[15m])) / sum(rate(pharmago_http_requests_total[15m])) * 100) or on() vector(0)
+- CPU de nodo (%): 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[15m])) * 100)
+- Memoria usada de nodo (%): avg_over_time(((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100)[15m:30s])
+- CPU por pod del backend (% de un core): sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="pharmago",pod=~"pharmago-(api-gateway|users-service|pharmacy-service).*"}[15m])) * 100
+- Memoria por pod del backend (MiB): avg_over_time(sum by (pod) (container_memory_working_set_bytes{namespace="pharmago",pod=~"pharmago-(api-gateway|users-service|pharmacy-service).*"})[15m:30s]) / 1048576
