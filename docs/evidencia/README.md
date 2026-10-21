@@ -47,3 +47,16 @@ El requisito de que los microservicios no compartan "nodos físicos" se cumple c
 | Archivo | Qué muestra | Fecha |
 |---|---|---|
 | [01-nodos-y-pods.png](01-plataforma/01-nodos-y-pods.png) | Los 4 nodos con su rol (`node-type`: 1 `ops` y 3 `backend`) y todos los pods del namespace `pharmago`, con el nodo donde corre cada uno. Cada microservicio tiene sus 2 réplicas en un nodo propio. | 2026-10-21 |
+
+### 03 · Despliegues seguros
+
+Técnica: rolling update (`maxSurge: 1`, `maxUnavailable: 0`, `minReadySeconds: 5`), `preStop` de 5 s, probes `httpGet /health` y warm-up de la base en pharmacy. La explicación está en [README-k8s.md, sección "Despliegue sin caída"](../../Implementacion%20K8S/Codigo/k8s/README-k8s.md#despliegue-sin-caída). Versión: `main` en `6b996db`, con el mismo tráfico de fondo que la línea base.
+
+| Archivo | Qué muestra | Fecha |
+|---|---|---|
+| [01-test-zero-downtime.txt](03-despliegues-seguros/01-test-zero-downtime.txt) | Salida de `test-zero-downtime.sh` reemplazando gateway, users y pharmacy, uno tras otro: 164 requests, 0 fallidos (100 % de disponibilidad). | 2026-10-21 |
+| [02-pods-durante-rollout.txt](03-despliegues-seguros/02-pods-durante-rollout.txt) | Eventos de los pods del backend con la hora de cada cambio. En cada servicio, el pod nuevo queda `Ready` antes de que empiece a terminar uno viejo, siempre en el nodo de ese servicio. | 2026-10-21 |
+| [03-grafana-overview-rollout-superior.png](03-despliegues-seguros/03-grafana-overview-rollout-superior.png) | Overview durante los rollouts (18:45 a 18:47): el tráfico sigue sin cortes y la tasa de error se mantiene en 0 %. La latencia de `/api/drug` sube hasta ~35 ms mientras se reemplaza pharmacy, por las primeras consultas en los pods nuevos, sin errores. | 2026-10-21 |
+| [04-grafana-overview-rollout-inferior.png](03-despliegues-seguros/04-grafana-overview-rollout-inferior.png) | Resto del Overview: ni errores 429 ni errores en `/api/drug` durante los rollouts. | 2026-10-21 |
+| [05-grafana-infra-rollout-nodo.png](03-despliegues-seguros/05-grafana-infra-rollout-nodo.png) | Infra: CPU y memoria de nodo estables antes y durante los rollouts (serie única; ver la limitación en la línea base). | 2026-10-21 |
+| [06-grafana-infra-rollout-pods.png](03-despliegues-seguros/06-grafana-infra-rollout-pods.png) | Infra: disco, CPU y memoria por pod. Reemplazar los pods no genera picos de recursos. | 2026-10-21 |
