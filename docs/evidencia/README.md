@@ -4,7 +4,7 @@ Capturas y salidas de terminal que respaldan cada ítem de la rúbrica. Cada car
 
 | Carpeta | Contenido | Issue |
 |---|---|---|
-| `00-linea-base/` | Estado del sistema antes de los cambios del obligatorio | [#12](https://github.com/JdFagnoni/288818_257026_286845/issues/12) |
+| `00-linea-base/` | Comportamiento normal del sistema, con tráfico liviano, antes de los cambios de telemetría, resiliencia y caos (ver abajo qué versión es) | [#12](https://github.com/JdFagnoni/288818_257026_286845/issues/12) |
 | `01-plataforma/` | Ítem 1. Implementación de plataforma | [#3](https://github.com/JdFagnoni/288818_257026_286845/issues/3) |
 | `02-alta-disponibilidad/` | Ítem 2. Alta disponibilidad | [#4](https://github.com/JdFagnoni/288818_257026_286845/issues/4) |
 | `03-despliegues-seguros/` | Ítem 3. Despliegues seguros | [#5](https://github.com/JdFagnoni/288818_257026_286845/issues/5) |
@@ -24,6 +24,10 @@ Capturas y salidas de terminal que respaldan cada ítem de la rúbrica. Cada car
 ## Índice
 
 ### 00 · Línea base
+
+Versión: `main` en `6b996db`. Incluye los ítems 1 (plataforma multinodo) y 3 (2 réplicas por microservicio y rolling update sin caída), pero todavía no los cambios de telemetría, circuit breaker, caos ni detección de anomalías. Sirve de referencia del estado normal para esos ítems; no sirve como "antes" de los ítems 1 y 3.
+
+Tráfico durante las capturas: un pod dentro del cluster hace una request cada 4 s al gateway, rotando entre `/api/drug`, `/api/pharmacy` y `/test-health`.
 
 | Archivo | Qué muestra | Fecha |
 |---|---|---|
