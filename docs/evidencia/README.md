@@ -29,6 +29,13 @@ Versión: `main` en `6b996db`. Incluye los ítems 1 (plataforma multinodo) y 3 (
 
 Tráfico durante las capturas: un pod dentro del cluster hace una request cada 4 s al gateway, rotando entre `/api/drug`, `/api/pharmacy` y `/test-health`.
 
+La topología del cluster en esta versión (nodos y pods) está en [01-plataforma/01-nodos-y-pods.png](01-plataforma/01-nodos-y-pods.png).
+
 | Archivo | Qué muestra | Fecha |
 |---|---|---|
-| [01-nodos-y-pods.png](00-linea-base/01-nodos-y-pods.png) | Los 4 nodos con su rol (`node-type`: 1 `ops` y 3 `backend`) y todos los pods del namespace `pharmago`, con el nodo donde corre cada uno. Cada microservicio tiene sus 2 réplicas en un nodo propio. | 2026-10-21 |
+
+### 01 · Plataforma
+
+| Archivo | Qué muestra | Fecha |
+|---|---|---|
+| [01-nodos-y-pods.png](01-plataforma/01-nodos-y-pods.png) | Los 4 nodos con su rol (`node-type`: 1 `ops` y 3 `backend`) y todos los pods del namespace `pharmago`, con el nodo donde corre cada uno. Cada microservicio tiene sus 2 réplicas en un nodo propio. | 2026-10-21 |
