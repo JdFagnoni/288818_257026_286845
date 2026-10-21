@@ -57,3 +57,7 @@ k8s/.port-forward.pids
 # === Docker ===
 .docker/
 docker-compose.override.yml
+
+# === Kubernetes ===
+# PIDs que guarda k8s/port-forward.sh
+.port-forward.pids
