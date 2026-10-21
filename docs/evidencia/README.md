@@ -33,6 +33,12 @@ La topología del cluster en esta versión (nodos y pods) está en [01-plataform
 
 | Archivo | Qué muestra | Fecha |
 |---|---|---|
+| [01-grafana-overview-superior.png](00-linea-base/01-grafana-overview-superior.png) | Dashboard *PharmaGo - Overview*: peticiones por segundo, latencia promedio, tasa de error (0 %) y throughput total. `/health` tiene la mayor tasa porque incluye las probes de Kubernetes. | 2026-10-21 |
+| [02-grafana-overview-inferior.png](00-linea-base/02-grafana-overview-inferior.png) | Resto del Overview: sin errores 429 ni errores en `/api/drug`. *Distribución de Status Codes* muestra "No data" por un error en la consulta del dashboard (divide series con y sin la etiqueta `status_code`); se corrige en el ítem 4. | 2026-10-21 |
+| [03-grafana-infra-pods.png](00-linea-base/03-grafana-infra-pods.png) | Dashboard *PharmaGo - Infra*: disco disponible, y CPU y memoria por pod. Los paneles de nodo muestran una sola serie (`node-exporter:9100`) porque node-exporter se scrapea a través de un Service y mezcla los 4 nodos; se corrige en el ítem 4. | 2026-10-21 |
+| [04-kibana-logs-backend.png](00-linea-base/04-kibana-logs-backend.png) | Logs del backend en Kibana (últimos 15 min). Todos son del gateway y están en texto plano con códigos de color de consola, no en JSON; users y pharmacy no registran logs por request. Ambas cosas se resuelven en el ítem 4. | 2026-10-21 |
+| [05-kibana-logs-pharmacy-json.png](00-linea-base/05-kibana-logs-pharmacy-json.png) | Logs de pharmacy (últimas 24 h): son JSON estructurado, por eso Kibana separa `LogLevel` y `Message` en campos. Solo aparecen los del arranque. | 2026-10-21 |
+| [06-metricas-linea-base.txt](00-linea-base/06-metricas-linea-base.txt) | Valores de referencia de los últimos 15 minutos sacados de Prometheus: tráfico, latencia promedio y p95 por endpoint, tasa de error, CPU y memoria de nodo y de cada pod del backend, con las consultas PromQL usadas. Sirve para fijar los umbrales de las alertas. | 2026-10-21 |
 
 ### 01 · Plataforma
 
