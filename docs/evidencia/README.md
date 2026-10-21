@@ -46,7 +46,8 @@ El requisito de que los microservicios no compartan "nodos físicos" se cumple c
 
 | Archivo | Qué muestra | Fecha |
 |---|---|---|
-| [01-nodos-y-pods.png](01-plataforma/01-nodos-y-pods.png) | Los 4 nodos con su rol (`node-type`: 1 `ops` y 3 `backend`) y todos los pods del namespace `pharmago`, con el nodo donde corre cada uno. Cada microservicio tiene sus 2 réplicas en un nodo propio. | 2026-10-21 |
+| [01-nodos-y-pods.png](01-plataforma/01-nodos-y-pods.png) | Los 4 nodos con su rol (`node-type`: 1 `ops` y 3 `backend`) y todos los pods del namespace `pharmago`, con el nodo donde corre cada uno. Cada microservicio tiene sus 2 réplicas en un nodo propio. Cluster de 4 nodos (IPs `192.168.58.x`). | 2026-10-21 |
+| [02-diagrama-despliegue.png](01-plataforma/02-diagrama-despliegue.png) | Diagrama de despliegue generado desde [deployment-diagram.md](../../Implementacion%20K8S/Codigo/k8s/deployment-diagram.md): servicios, pods por nodo, DaemonSets y flujos de telemetría y logs. Muestra la ubicación observada en otro cluster del equipo, de 5 nodos (IPs `192.168.49.x`); por eso los nodos no coinciden con la captura anterior. En los dos se cumple la regla: cada microservicio en un nodo distinto. | 2026-10-21 |
 
 ### 03 · Despliegues seguros
 
