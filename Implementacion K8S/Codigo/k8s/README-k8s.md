@@ -202,6 +202,29 @@ kubectl apply -f deployments/backend/
 
 Esperar a que los Pods viejos desaparezcan antes del `apply` es necesario: si todavía existe uno, la afinidad obliga a los nuevos a ir a su nodo, y el scheduler puede tardar hasta 5 minutos en reintentar.
 
+## Resiliencia ante fallas
+
+Todo el tráfico entre servicios pasa por el gateway: es YARP el que reenvía cada request a users-service o a pharmacy-service. Por eso las protecciones contra fallas están ahí, en el cliente HTTP que usa YARP, y se configuran en la sección `Resilience` de `appsettings.json`.
+
+Son tres, y actúan en este orden:
+
+1. **Timeout por intento (5s).** Si un servicio se cuelga, el intento se corta y cuenta como fallo, en vez de dejar al usuario esperando hasta 100 segundos. El endpoint más pesado, `POST /api/export`, carga el plugin del formato, hace una consulta y escribe un archivo chico: en las pruebas respondió en menos de 1s, incluso en el primer llamado. 5s deja margen de sobra. En el peor caso, un `GET` contra un servicio colgado tarda unos 15s en fallar (3 intentos de 5s).
+2. **Reintentos (2).** Si un intento falla por un error de red, un 5xx o un timeout, el gateway espera un poco y prueba de nuevo: 100ms antes del primer reintento y 200ms antes del segundo, más un margen al azar de hasta 100ms para que las dos réplicas del gateway no reintenten justo al mismo tiempo. Sirven sobre todo para fallas pasajeras. Si un pod muere de golpe, el reintento no necesariamente va al pod sano: el gateway le habla al Service y kube-proxy elige el pod al azar en cada conexión. En la prueba, matando con `kill -9` una de las dos réplicas de pharmacy, los dos reintentos volvieron a caer en el pod muerto y ese request dio 502; los siguientes salieron bien porque Kubernetes sacó al pod de los endpoints en menos de un segundo. Solo se reintentan `GET`, `HEAD` y `OPTIONS`: repetir un `POST` podría registrar dos veces la misma compra.
+3. **Circuit breaker, uno por microservicio.** Si un servicio falla 5 veces seguidas, el gateway deja de llamarlo durante 5 segundos y responde `503` al instante (con los headers `Retry-After` y `X-Circuit-Breaker: open`). Así no se acumulan requests esperando a un servicio que está caído, y el servicio tiene margen para recuperarse. Pasados los 5 segundos deja pasar un solo request de prueba: si funciona, vuelve a la normalidad; si no, espera otros 5 segundos. La pausa es corta a propósito: cuando el servicio vuelve, el gateway lo nota en 5 segundos como mucho, y un request de prueba cada 5 segundos no le agrega carga a un servicio caído. Cada réplica del gateway lleva su propia cuenta.
+
+Cada reintento y cada cambio del circuito queda en los logs del gateway (`Reintento 1/2 hacia pharmacy-cluster...`, `Circuit breaker ABIERTO/SEMIABIERTO/CERRADO para pharmacy-cluster...`), y Fluent Bit los manda a Kibana.
+
+Para verlo funcionar y medir cuánto tarda el sistema en recuperarse:
+
+```bash
+cd k8s
+./test-circuit-breaker.sh                            # apaga pharmacy 40s y muestra el circuito abriéndose y cerrándose
+./measure-mttr.sh pharmago-pharmacy-service delete   # borra un pod y mide cuánto tarda en estar listo su reemplazo
+./measure-mttr.sh pharmago-users-service crash       # mata el proceso y mide cuánto tarda el contenedor en volver
+```
+
+`measure-mttr.sh` mide 3 veces y da el promedio (con `RUNS=5` se cambia la cantidad). En modo `crash`, si el mismo pod se cae varias veces seguidas, Kubernetes espera cada vez más antes de reiniciarlo (10s, 20s...). Por eso el script elige el pod que menos veces se reinició.
+
 ### Ver servicios
 
 ```bash
@@ -522,6 +545,8 @@ k8s/
 ├── configure-nodes.sh
 ├── apply-k8s.sh
 ├── test-zero-downtime.sh
+├── test-circuit-breaker.sh
+├── measure-mttr.sh
 ├── cleanup.sh
 └── README-k8s.md
 ```
