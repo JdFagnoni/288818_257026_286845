@@ -4,7 +4,6 @@ using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
 using Polly;
 using Polly.CircuitBreaker;
-using Polly.Extensions.Http;
 using Polly.Timeout;
 using Yarp.ReverseProxy.Forwarder;
 
@@ -66,12 +65,10 @@ namespace PharmaGo.ApiGateway.Resilience
             // fallo en vez de dejar el request colgado hasta el timeout de YARP (100s).
             var timeout = Policy.TimeoutAsync<HttpResponseMessage>(_options.AttemptTimeoutSeconds);
 
-            // Errores de red, 5xx, 408 y timeouts cuentan como fallos. Tras N
-            // fallos seguidos el circuito se abre y los requests fallan al instante
-            // durante CircuitBreakerBreakSeconds; después deja pasar uno de prueba.
-            var circuitBreaker = HttpPolicyExtensions
-                .HandleTransientHttpError()
-                .Or<TimeoutRejectedException>()
+            // Tras N fallos de infraestructura seguidos el circuito se abre y los
+            // requests fallan al instante durante CircuitBreakerBreakSeconds; después
+            // deja pasar uno de prueba.
+            var circuitBreaker = InfrastructureFailures()
                 .CircuitBreakerAsync(
                     _options.CircuitBreakerFailuresBeforeBreaking,
                     TimeSpan.FromSeconds(_options.CircuitBreakerBreakSeconds),
@@ -89,9 +86,7 @@ namespace PharmaGo.ApiGateway.Resilience
             // y kube-proxy elige el pod al azar en cada conexión nueva. Si un pod
             // muere de golpe, los reintentos pueden volver a caer en él hasta que
             // Kubernetes lo saca de los endpoints (menos de 1s en las pruebas).
-            var retry = HttpPolicyExtensions
-                .HandleTransientHttpError()
-                .Or<TimeoutRejectedException>()
+            var retry = InfrastructureFailures()
                 .WaitAndRetryAsync(
                     _options.RetryCount,
                     attempt => TimeSpan.FromMilliseconds(
@@ -111,6 +106,19 @@ namespace PharmaGo.ApiGateway.Resilience
                 WithRetry: Policy.WrapAsync(openCircuitFallback, retry, circuitBreaker, timeout),
                 WithoutRetry: Policy.WrapAsync(openCircuitFallback, circuitBreaker, timeout));
         }
+
+        // Solo cuentan las fallas de infraestructura: errores de red, timeouts y
+        // 502/503/504. Los servicios devuelven 503 cuando no responde la base de
+        // datos. Un 500 es un error del código de un endpoint: no se reintenta
+        // (volvería a fallar igual) y no abre el circuito, para que un endpoint
+        // roto no deje sin servicio al resto de las rutas del microservicio.
+        private static PolicyBuilder<HttpResponseMessage> InfrastructureFailures() =>
+            Policy<HttpResponseMessage>
+                .Handle<HttpRequestException>()
+                .Or<TimeoutRejectedException>()
+                .OrResult(response => response.StatusCode is HttpStatusCode.BadGateway
+                    or HttpStatusCode.ServiceUnavailable
+                    or HttpStatusCode.GatewayTimeout);
 
         private HttpResponseMessage CircuitOpenResponse(string clusterId)
         {
