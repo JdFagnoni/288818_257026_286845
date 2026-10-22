@@ -19,7 +19,7 @@ if (rateLimitMode.Equals("IP", StringComparison.OrdinalIgnoreCase))
     builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
     builder.Services.Configure<IpRateLimitPolicies>(builder.Configuration.GetSection("IpRateLimitPolicies"));
     builder.Services.AddInMemoryRateLimiting();
-    builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+    builder.Services.AddSingleton<IRateLimitConfiguration, ConnectionIpRateLimitConfiguration>();
 }
 
 builder.Services.AddReverseProxy()

@@ -1,379 +1,77 @@
-# Guía de Rate Limiting - API Gateway
+# Rate limiting en el API Gateway
 
-## 🎯 Problema: ¿Por IP o por Usuario?
+El gateway limita cuántos requests puede hacer cada cliente, para que un cliente que manda demasiado tráfico (por error o a propósito) no deje sin servicio al resto. Cuando un cliente se pasa del límite, el gateway responde `429 Too Many Requests` sin reenviar el request a los microservicios.
 
-### ❌ Problema con Rate Limiting por IP
+El modo se elige con `RateLimiting:Mode` en `appsettings.json`. Hay tres: `IP`, `User` y `Disabled`.
 
-Cuando tu frontend está desplegado (React, Angular, etc.), **todas las peticiones vienen desde el servidor del frontend**, no desde el navegador del usuario:
+## Qué modo está activo
 
-```
-Usuario A (navegador) ──┐
-Usuario B (navegador) ──┼──> Frontend Server (1 IP) ──> API Gateway
-Usuario C (navegador) ──┘
-```
+| Entorno | Archivo | Modo |
+| --- | --- | --- |
+| Kubernetes y docker-compose | `appsettings.json` | `IP` |
+| Desarrollo local (`dotnet run`) | `appsettings.Development.json` | `Disabled` |
 
-**Resultado:** Los 3 usuarios comparten el mismo límite de peticiones → ❌ Bloqueos injustos
+## Modo `IP` (el que se usa en el cluster)
 
-### Otros Escenarios Problemáticos:
+Usa la librería AspNetCoreRateLimit. Cada IP tiene su propio contador y las reglas están en `IpRateLimiting.GeneralRules`:
 
-1. **Usuarios corporativos**: Toda una empresa detrás de 1 IP pública
-2. **ISPs con NAT**: Miles de usuarios con la misma IP
-3. **CDN/Load Balancer**: Peticiones vienen desde IPs del CDN
+| Endpoint | Límite |
+| --- | --- |
+| `POST /api/login` | 10 por minuto (frena intentos de adivinar contraseñas) |
+| Cualquier otro | 100 por minuto y 1000 por hora |
 
-## ✅ Soluciones Implementadas
+`/health`, `/metrics` y los `OPTIONS` de CORS no cuentan, para que las probes de Kubernetes y Prometheus nunca queden bloqueadas.
 
-### Opción 1: Rate Limiting por Usuario (Recomendado)
+### De dónde sale la IP
 
-**Cómo funciona:**
-- Usa el **token de autenticación** como identificador
-- Cada usuario tiene su propio límite
-- Para endpoints públicos (login), usa IP como fallback
+Se usa la IP de la conexión TCP y nada más (`ConnectionIpRateLimitConfiguration`).
 
-**Configuración en `appsettings.json`:**
+Antes el gateway también leía el header `X-Real-IP`. Ese header lo manda el cliente, así que alcanzaba con cambiarlo en cada request para que cada uno contara como una IP nueva y el límite no se aplicara nunca. Solo tiene sentido confiar en ese header cuando lo agrega un proxy propio delante del gateway, y acá no hay ninguno: el navegador le habla directo al gateway. Ojo con un detalle de la librería: lee `X-Real-IP` por defecto aunque se borre `RealIpHeader` de la configuración. Por eso se reemplazan sus resolvers en vez de tocar solo el JSON.
 
-```json
-{
-  "RateLimiting": {
-    "Mode": "User",
-    "MaxRequestsPerMinute": 100,
-    "MaxRequestsPerHour": 1000
-  }
-}
-```
+### Límites a tener en cuenta
 
-**Ventajas:**
-- ✅ Cada usuario tiene su propio límite
-- ✅ Funciona con frontend desplegado
-- ✅ Justo para todos los usuarios
-- ✅ Usa IP como fallback para endpoints públicos
+- **Cada réplica del gateway cuenta por separado.** Los contadores están en la memoria de cada pod. Con 2 réplicas, el tráfico se reparte entre las dos y el límite real queda en unos 200 por minuto en vez de 100. Para un límite exacto habría que compartir los contadores, por ejemplo con Redis.
+- **Varios usuarios pueden compartir una IP.** Por ejemplo, una oficina detrás de un mismo router. En este cluster pasa siempre: todo lo que entra con `kubectl port-forward` llega al gateway como `127.0.0.1`, y por NodePort kube-proxy suele reemplazar la IP de origen por la del nodo. En la demo, todos los clientes comparten un solo límite. Para tener la IP real del cliente haría falta un ingress delante que agregue `X-Forwarded-For`, y que el gateway confíe en ese header solo cuando viene de ese ingress.
 
-**Desventajas:**
-- ⚠️ Usuarios sin autenticar comparten límite por IP
-- ⚠️ Requiere que el frontend envíe el token en cada petición
+## Modo `User`
 
-### Opción 2: Rate Limiting por IP
+Usa un middleware propio (`UserRateLimitMiddleware`). En vez de la IP, identifica al cliente así, en este orden:
 
-**Cómo funciona:**
-- Usa la IP del cliente (con soporte para proxies)
-- Lee headers `X-Forwarded-For` y `X-Real-IP`
+1. Los primeros 8 caracteres del header `Authorization`.
+2. El header `X-User-Id`.
+3. Si no viene ninguno de los dos, la IP de la conexión.
 
-**Configuración en `appsettings.json`:**
+Los límites son 100 por minuto y 1000 por hora, y están fijos en el código (`MaxRequestsPerMinute` y `MaxRequestsPerHour`). Las claves con esos nombres en `appsettings.json` no se leen.
+
+Este modo no está activo, y no conviene activarlo tal como está: el token no se valida, así que un cliente puede mandar un `Authorization` o un `X-User-Id` distinto en cada request y nunca llegar al límite. Es el mismo problema que tenía `X-Real-IP`. Para usarlo habría que identificar al usuario a partir de un token validado.
+
+## Modo `Disabled`
+
+No aplica ningún límite. Es el que usa `appsettings.Development.json` para trabajar en local sin que las pruebas manuales choquen con el 429.
+
+## Cómo cambiar los límites
+
+Se editan las reglas de `IpRateLimiting.GeneralRules` en `appsettings.json` y se reconstruye la imagen del gateway. Por ejemplo, para dejar `GET /api/drug` en 200 por minuto:
 
 ```json
 {
-  "RateLimiting": {
-    "Mode": "IP"
-  },
-  "IpRateLimiting": {
-    "EnableEndpointRateLimiting": true,
-    "RealIpHeader": "X-Real-IP",
-    "GeneralRules": [
-      {
-        "Endpoint": "POST:/api/login",
-        "Period": "1m",
-        "Limit": 10
-      },
-      {
-        "Endpoint": "*",
-        "Period": "1m",
-        "Limit": 500
-      }
-    ]
-  }
+  "Endpoint": "GET:/api/drug",
+  "Period": "1m",
+  "Limit": 200
 }
 ```
 
-**Ventajas:**
-- ✅ Simple de implementar
-- ✅ Funciona sin autenticación
-- ✅ Protege contra ataques DDoS básicos
+Si se quiere que una red interna no tenga límite, se agrega en `IpRateLimitPolicies.IpRules` con `"Limit": 0`.
 
-**Desventajas:**
-- ❌ Múltiples usuarios pueden compartir IP
-- ❌ Puede bloquear usuarios legítimos
+## Cómo probarlo
 
-### Opción 3: Deshabilitado (Desarrollo)
-
-**Configuración:**
-
-```json
-{
-  "RateLimiting": {
-    "Mode": "Disabled"
-  }
-}
-```
-
-**Uso:** Solo para desarrollo local
-
-## 🔧 Configuración Recomendada por Ambiente
-
-### Desarrollo Local (`appsettings.Development.json`)
-
-```json
-{
-  "RateLimiting": {
-    "Mode": "Disabled"
-  }
-}
-```
-
-### Producción (`appsettings.json`)
-
-```json
-{
-  "RateLimiting": {
-    "Mode": "User",
-    "MaxRequestsPerMinute": 100,
-    "MaxRequestsPerHour": 1000
-  },
-  "IpRateLimiting": {
-    "EndpointWhitelist": [
-      "get:/health",
-      "get:/metrics"
-    ],
-    "GeneralRules": [
-      {
-        "Endpoint": "POST:/api/login",
-        "Period": "1m",
-        "Limit": 10
-      }
-    ]
-  }
-}
-```
-
-## 📝 Cómo Funciona el Rate Limiting por Usuario
-
-### 1. Identificación del Usuario
-
-El middleware intenta identificar al usuario en este orden:
-
-```csharp
-1. Header "Authorization" → Usa el token
-2. Header "X-User-Id" → Usa el ID de usuario (si el frontend lo envía)
-3. Fallback → Usa la IP (para endpoints públicos)
-```
-
-### 2. Ejemplo de Petición desde el Frontend
-
-```javascript
-// Frontend (React/Angular/Vue)
-const response = await fetch('http://localhost:5000/api/drug', {
-  headers: {
-    'Authorization': 'Bearer abc123...',  // ← Esto se usa para rate limiting
-    'Content-Type': 'application/json'
-  }
-});
-```
-
-### 3. Contadores Independientes
-
-Cada usuario tiene sus propios contadores:
-
-```
-Usuario "token:abc123":
-  - Minuto actual: 45/100 peticiones
-  - Hora actual: 320/1000 peticiones
-
-Usuario "token:xyz789":
-  - Minuto actual: 12/100 peticiones
-  - Hora actual: 89/1000 peticiones
-```
-
-## 🌐 Configuración para Frontend Desplegado
-
-### Si tu frontend está en un servidor separado:
-
-1. **Asegúrate de que el frontend envíe el token:**
-
-```javascript
-// Configuración global de axios (ejemplo)
-axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-```
-
-2. **Usa Mode: "User" en producción:**
-
-```json
-{
-  "RateLimiting": {
-    "Mode": "User"
-  }
-}
-```
-
-3. **Configura CORS correctamente:**
-
-```json
-{
-  "AllowedOrigins": [
-    "https://tu-frontend.com",
-    "https://www.tu-frontend.com"
-  ]
-}
-```
-
-### Si tu frontend está en el mismo servidor (SSR):
-
-Puedes usar `Mode: "IP"` con límites más altos:
-
-```json
-{
-  "RateLimiting": {
-    "Mode": "IP"
-  },
-  "IpRateLimiting": {
-    "GeneralRules": [
-      {
-        "Endpoint": "*",
-        "Period": "1m",
-        "Limit": 5000
-      }
-    ]
-  }
-}
-```
-
-## 🧪 Testing
-
-### Probar Rate Limiting por Usuario
+Desde dentro del cluster, con un pod temporal que manda 250 requests seguidos:
 
 ```bash
-# 1. Obtener un token
-TOKEN=$(curl -X POST http://localhost:5000/api/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@test.com","password":"pass"}' \
-  | jq -r '.token')
-
-# 2. Hacer 150 peticiones con el mismo token
-for i in {1..150}; do
-  curl -H "Authorization: Bearer $TOKEN" \
-    http://localhost:5000/api/drug
-done
-# Las últimas 50 deberían dar 429
+kubectl run rl-check -n pharmago --rm -i --restart=Never --image=busybox:1.36 -- sh -c '
+  for i in $(seq 1 250); do
+    wget -S -q -O /dev/null http://pharmago-api-gateway/test-health 2>&1 | grep -o "HTTP/1.1 [0-9]*"
+  done | sort | uniq -c'
 ```
 
-### Probar Rate Limiting por IP
-
-```bash
-# Hacer 600 peticiones sin token
-for i in {1..600}; do
-  curl http://localhost:5000/api/drug
-done
-# Las últimas 100 deberían dar 429
-```
-
-## 📊 Monitoreo
-
-### Logs del Rate Limiting
-
-```
-[Warning] Rate limit exceeded for user:abc123: Exceeded 100 requests per minute
-[Warning] Rate limit exceeded for ip:192.168.1.1: Exceeded 500 requests per minute
-```
-
-### Métricas de Prometheus
-
-Puedes crear métricas personalizadas para monitorear:
-
-```csharp
-// En UserRateLimitMiddleware.cs
-private static readonly Counter RateLimitExceeded = Metrics
-    .CreateCounter("rate_limit_exceeded_total", "Total rate limit violations",
-        new CounterConfiguration { LabelNames = new[] { "identifier_type" } });
-
-// Al bloquear una petición
-RateLimitExceeded.WithLabels(identifier.StartsWith("user:") ? "user" : "ip").Inc();
-```
-
-## 🎛️ Ajustes Finos
-
-### Límites Diferentes por Endpoint
-
-```json
-{
-  "IpRateLimiting": {
-    "GeneralRules": [
-      {
-        "Endpoint": "POST:/api/login",
-        "Period": "1m",
-        "Limit": 5
-      },
-      {
-        "Endpoint": "GET:/api/drug/*",
-        "Period": "1m",
-        "Limit": 200
-      },
-      {
-        "Endpoint": "POST:/api/purchases",
-        "Period": "1m",
-        "Limit": 20
-      }
-    ]
-  }
-}
-```
-
-### Whitelist de IPs (Servidores Internos)
-
-```json
-{
-  "IpRateLimitPolicies": {
-    "IpRules": [
-      {
-        "Ip": "10.0.0.0/8",
-        "Rules": [
-          {
-            "Endpoint": "*",
-            "Period": "1s",
-            "Limit": 0
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-### Whitelist de Endpoints (Health Checks)
-
-```json
-{
-  "IpRateLimiting": {
-    "EndpointWhitelist": [
-      "get:/health",
-      "get:/metrics",
-      "get:/swagger/*"
-    ]
-  }
-}
-```
-
-## 🚀 Recomendación Final
-
-Para tu caso (frontend desplegado):
-
-1. **Usa `Mode: "User"`** en producción
-2. **Usa `Mode: "Disabled"`** en desarrollo
-3. **Asegúrate de que el frontend envíe el token** en el header `Authorization`
-4. **Configura límites razonables:**
-   - Login: 10/minuto (previene brute force)
-   - Otros endpoints: 100/minuto por usuario
-   - Total por hora: 1000 por usuario
-
-```json
-{
-  "RateLimiting": {
-    "Mode": "User",
-    "MaxRequestsPerMinute": 100,
-    "MaxRequestsPerHour": 1000
-  }
-}
-```
-
-Esto te da:
-- ✅ Protección contra abuso
-- ✅ Cada usuario tiene su propio límite
-- ✅ Funciona con frontend desplegado
-- ✅ Fallback a IP para endpoints públicos
-
+Con 2 réplicas del gateway, el resultado esperado es alrededor de 200 respuestas `200` y 50 `429`. Si se repite agregando `--header "X-Real-IP: 10.0.0.$i"` al `wget`, el resultado tiene que ser el mismo: así se comprueba que cambiar ese header ya no evade el límite.
