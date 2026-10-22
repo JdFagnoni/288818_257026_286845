@@ -1,0 +1,80 @@
+# Pods del backend durante el rollout
+
+Fecha: 2026-10-21 22:07 (UTC-3)
+Comando: kubectl get pods -n pharmago -l workload-class=pharmago-backend-microservice -o wide -w
+Cada línea lleva la hora local en que kubectl reportó el cambio.
+
+22:07:08  NAME                                         READY   STATUS    RESTARTS   AGE   IP            NODE           NOMINATED NODE   READINESS GATES
+22:07:08  pharmago-api-gateway-7b89664987-669lx        1/1     Running   0          33m   10.244.2.5    pharmago-m03   <none>           <none>
+22:07:08  pharmago-api-gateway-7b89664987-bdjqp        1/1     Running   0          33m   10.244.2.6    pharmago-m03   <none>           <none>
+22:07:08  pharmago-pharmacy-service-6488b8cb58-hnkz4   1/1     Running   0          32m   10.244.3.6    pharmago-m04   <none>           <none>
+22:07:08  pharmago-pharmacy-service-6488b8cb58-sm2j9   1/1     Running   0          32m   10.244.3.5    pharmago-m04   <none>           <none>
+22:07:08  pharmago-users-service-7cb7dc698-4dhh5       1/1     Running   0          34m   10.244.0.10   pharmago       <none>           <none>
+22:07:08  pharmago-users-service-7cb7dc698-tmxff       1/1     Running   0          34m   10.244.0.11   pharmago       <none>           <none>
+22:07:24  pharmago-api-gateway-6c6688494d-pv4lg        0/1     Pending   0          0s    <none>        <none>         <none>           <none>
+22:07:24  pharmago-api-gateway-6c6688494d-pv4lg        0/1     Pending   0          0s    <none>        pharmago-m03   <none>           <none>
+22:07:31  pharmago-api-gateway-6c6688494d-pv4lg        0/1     ContainerCreating   0          6s    <none>        pharmago-m03   <none>           <none>
+22:07:44  pharmago-api-gateway-6c6688494d-pv4lg        0/1     Running             0          20s   10.244.2.8    pharmago-m03   <none>           <none>
+22:07:54  pharmago-api-gateway-6c6688494d-pv4lg        0/1     Running             0          29s   10.244.2.8    pharmago-m03   <none>           <none>
+22:07:54  pharmago-api-gateway-6c6688494d-pv4lg        1/1     Running             0          29s   10.244.2.8    pharmago-m03   <none>           <none>
+22:07:59  pharmago-api-gateway-7b89664987-669lx        1/1     Terminating         0          34m   10.244.2.5    pharmago-m03   <none>           <none>
+22:07:59  pharmago-api-gateway-7b89664987-669lx        1/1     Terminating         0          34m   10.244.2.5    pharmago-m03   <none>           <none>
+22:07:59  pharmago-api-gateway-6c6688494d-4r6lp        0/1     Pending             0          0s    <none>        <none>         <none>           <none>
+22:07:59  pharmago-api-gateway-6c6688494d-4r6lp        0/1     Pending             0          1s    <none>        pharmago-m03   <none>           <none>
+22:07:59  pharmago-api-gateway-6c6688494d-4r6lp        0/1     ContainerCreating   0          1s    <none>        pharmago-m03   <none>           <none>
+22:08:05  pharmago-api-gateway-6c6688494d-4r6lp        0/1     Running             0          6s    10.244.2.9    pharmago-m03   <none>           <none>
+22:08:05  pharmago-api-gateway-7b89664987-669lx        0/1     Completed           0          34m   10.244.2.5    pharmago-m03   <none>           <none>
+22:08:05  pharmago-api-gateway-7b89664987-669lx        0/1     Completed           0          34m   10.244.2.5    pharmago-m03   <none>           <none>
+22:08:05  pharmago-api-gateway-7b89664987-669lx        0/1     Completed           0          34m   10.244.2.5    pharmago-m03   <none>           <none>
+22:08:07  pharmago-api-gateway-6c6688494d-4r6lp        0/1     Running             0          9s    10.244.2.9    pharmago-m03   <none>           <none>
+22:08:07  pharmago-api-gateway-6c6688494d-4r6lp        1/1     Running             0          9s    10.244.2.9    pharmago-m03   <none>           <none>
+22:08:12  pharmago-api-gateway-7b89664987-bdjqp        1/1     Terminating         0          34m   10.244.2.6    pharmago-m03   <none>           <none>
+22:08:12  pharmago-api-gateway-7b89664987-bdjqp        1/1     Terminating         0          34m   10.244.2.6    pharmago-m03   <none>           <none>
+22:08:12  pharmago-users-service-7d64f79cdf-z28wq      0/1     Pending             0          0s    <none>        <none>         <none>           <none>
+22:08:12  pharmago-users-service-7d64f79cdf-z28wq      0/1     Pending             0          0s    <none>        pharmago       <none>           <none>
+22:08:12  pharmago-users-service-7d64f79cdf-z28wq      0/1     ContainerCreating   0          0s    <none>        pharmago       <none>           <none>
+22:08:14  pharmago-users-service-7d64f79cdf-z28wq      0/1     Running             0          2s    10.244.0.12   pharmago       <none>           <none>
+22:08:26  pharmago-api-gateway-7b89664987-bdjqp        0/1     Terminating         0          35m   10.244.2.6    pharmago-m03   <none>           <none>
+22:08:27  pharmago-api-gateway-7b89664987-bdjqp        0/1     Completed           0          35m   10.244.2.6    pharmago-m03   <none>           <none>
+22:08:28  pharmago-api-gateway-7b89664987-bdjqp        0/1     Completed           0          35m   10.244.2.6    pharmago-m03   <none>           <none>
+22:08:28  pharmago-api-gateway-7b89664987-bdjqp        0/1     Completed           0          35m   10.244.2.6    pharmago-m03   <none>           <none>
+22:08:31  pharmago-users-service-7d64f79cdf-z28wq      0/1     Running             0          19s   10.244.0.12   pharmago       <none>           <none>
+22:08:31  pharmago-users-service-7d64f79cdf-z28wq      1/1     Running             0          19s   10.244.0.12   pharmago       <none>           <none>
+22:08:36  pharmago-users-service-7cb7dc698-4dhh5       1/1     Terminating         0          35m   10.244.0.10   pharmago       <none>           <none>
+22:08:36  pharmago-users-service-7cb7dc698-4dhh5       1/1     Terminating         0          35m   10.244.0.10   pharmago       <none>           <none>
+22:08:36  pharmago-users-service-7d64f79cdf-s7s97      0/1     Pending             0          0s    <none>        <none>         <none>           <none>
+22:08:36  pharmago-users-service-7d64f79cdf-s7s97      0/1     Pending             0          0s    <none>        pharmago       <none>           <none>
+22:08:36  pharmago-users-service-7d64f79cdf-s7s97      0/1     ContainerCreating   0          0s    <none>        pharmago       <none>           <none>
+22:08:37  pharmago-users-service-7d64f79cdf-s7s97      0/1     Running             0          1s    10.244.0.13   pharmago       <none>           <none>
+22:08:42  pharmago-users-service-7cb7dc698-4dhh5       0/1     Completed           0          35m   10.244.0.10   pharmago       <none>           <none>
+22:08:42  pharmago-users-service-7d64f79cdf-s7s97      0/1     Running             0          6s    10.244.0.13   pharmago       <none>           <none>
+22:08:42  pharmago-users-service-7d64f79cdf-s7s97      1/1     Running             0          6s    10.244.0.13   pharmago       <none>           <none>
+22:08:43  pharmago-users-service-7cb7dc698-4dhh5       0/1     Completed           0          35m   10.244.0.10   pharmago       <none>           <none>
+22:08:43  pharmago-users-service-7cb7dc698-4dhh5       0/1     Completed           0          35m   10.244.0.10   pharmago       <none>           <none>
+22:08:58  pharmago-users-service-7cb7dc698-tmxff       1/1     Terminating         0          35m   10.244.0.11   pharmago       <none>           <none>
+22:08:58  pharmago-users-service-7cb7dc698-tmxff       1/1     Terminating         0          36m   10.244.0.11   pharmago       <none>           <none>
+22:08:59  pharmago-pharmacy-service-86d4bf478c-f65bc   0/1     Pending             0          0s    <none>        <none>         <none>           <none>
+22:08:59  pharmago-pharmacy-service-86d4bf478c-f65bc   0/1     Pending             0          0s    <none>        pharmago-m04   <none>           <none>
+22:08:59  pharmago-pharmacy-service-86d4bf478c-f65bc   0/1     ContainerCreating   0          0s    <none>        pharmago-m04   <none>           <none>
+22:09:01  pharmago-pharmacy-service-86d4bf478c-f65bc   0/1     Running             0          2s    10.244.3.7    pharmago-m04   <none>           <none>
+22:09:03  pharmago-users-service-7cb7dc698-tmxff       0/1     Completed           0          36m   10.244.0.11   pharmago       <none>           <none>
+22:09:04  pharmago-users-service-7cb7dc698-tmxff       0/1     Completed           0          36m   10.244.0.11   pharmago       <none>           <none>
+22:09:04  pharmago-users-service-7cb7dc698-tmxff       0/1     Completed           0          36m   10.244.0.11   pharmago       <none>           <none>
+22:09:07  pharmago-pharmacy-service-86d4bf478c-f65bc   0/1     Running             0          8s    10.244.3.7    pharmago-m04   <none>           <none>
+22:09:08  pharmago-pharmacy-service-86d4bf478c-f65bc   1/1     Running             0          8s    10.244.3.7    pharmago-m04   <none>           <none>
+22:09:12  pharmago-pharmacy-service-6488b8cb58-hnkz4   1/1     Terminating         0          35m   10.244.3.6    pharmago-m04   <none>           <none>
+22:09:12  pharmago-pharmacy-service-6488b8cb58-hnkz4   1/1     Terminating         0          35m   10.244.3.6    pharmago-m04   <none>           <none>
+22:09:12  pharmago-pharmacy-service-86d4bf478c-6d8rc   0/1     Pending             0          0s    <none>        <none>         <none>           <none>
+22:09:12  pharmago-pharmacy-service-86d4bf478c-6d8rc   0/1     Pending             0          0s    <none>        pharmago-m04   <none>           <none>
+22:09:12  pharmago-pharmacy-service-86d4bf478c-6d8rc   0/1     ContainerCreating   0          0s    <none>        pharmago-m04   <none>           <none>
+22:09:14  pharmago-pharmacy-service-86d4bf478c-6d8rc   0/1     Running             0          2s    10.244.3.8    pharmago-m04   <none>           <none>
+22:09:18  pharmago-pharmacy-service-86d4bf478c-6d8rc   0/1     Running             0          6s    10.244.3.8    pharmago-m04   <none>           <none>
+22:09:18  pharmago-pharmacy-service-86d4bf478c-6d8rc   1/1     Running             0          6s    10.244.3.8    pharmago-m04   <none>           <none>
+22:09:20  pharmago-pharmacy-service-6488b8cb58-hnkz4   0/1     Completed           0          35m   10.244.3.6    pharmago-m04   <none>           <none>
+22:09:20  pharmago-pharmacy-service-6488b8cb58-hnkz4   0/1     Completed           0          35m   10.244.3.6    pharmago-m04   <none>           <none>
+22:09:20  pharmago-pharmacy-service-6488b8cb58-hnkz4   0/1     Completed           0          35m   10.244.3.6    pharmago-m04   <none>           <none>
+22:09:23  pharmago-pharmacy-service-6488b8cb58-sm2j9   1/1     Terminating         0          35m   10.244.3.5    pharmago-m04   <none>           <none>
+22:09:23  pharmago-pharmacy-service-6488b8cb58-sm2j9   1/1     Terminating         0          35m   10.244.3.5    pharmago-m04   <none>           <none>
+22:09:30  pharmago-pharmacy-service-6488b8cb58-sm2j9   0/1     Completed           0          35m   10.244.3.5    pharmago-m04   <none>           <none>
+22:09:30  pharmago-pharmacy-service-6488b8cb58-sm2j9   0/1     Completed           0          35m   10.244.3.5    pharmago-m04   <none>           <none>
+22:09:30  pharmago-pharmacy-service-6488b8cb58-sm2j9   0/1     Completed           0          35m   10.244.3.5    pharmago-m04   <none>           <none>
