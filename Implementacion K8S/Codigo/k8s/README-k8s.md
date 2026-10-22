@@ -4,6 +4,18 @@ Esta guía despliega PharmaGo en un cluster multinodo. Para el primer requisito 
 
 ## Topología requerida
 
+El cluster tiene 5 nodos. Esta es la asignación de referencia del equipo, la misma en todos los clusters (ver también [deployment-diagram.md](deployment-diagram.md)):
+
+| Nodo | Rol (`node-type`) | Qué corre |
+|---|---|---|
+| `pharmago` (control-plane) | `backend` | users-service ×2 |
+| `pharmago-m02` | `ops` | Base de datos, OTel Collector, Prometheus, Grafana, Elasticsearch y Kibana, con sus PersistentVolumes |
+| `pharmago-m03` | `backend` | api-gateway ×2 y UI |
+| `pharmago-m04` | `backend` | pharmacy-service ×2 |
+| `pharmago-m05` | sin rol | Solo los DaemonSets (node-exporter y fluent-bit) |
+
+Las reglas de los manifests:
+
 - **3 nodos `backend`**: uno por microservicio (`api-gateway`, `users-service`, `pharmacy-service`). Cada microservicio corre 2 réplicas y las dos van juntas a su nodo. La anti-afinidad obligatoria impide que Pods de microservicios distintos compartan el mismo hostname Kubernetes.
 - **1 nodo `ops`**: base de datos, componentes de observabilidad y los PersistentVolumes locales.
 - **UI**: puede ejecutarse en cualquiera de los nodos `backend`; no cuenta como uno de los tres microservicios backend.
@@ -13,7 +25,9 @@ Las tres Deployments backend se actualizan con `RollingUpdate` (`maxSurge: 1`, `
 
 Las dos réplicas de un servicio comparten nodo: cubren la falla de un Pod y los despliegues, no la caída de ese nodo. Repartirlas exigiría nodos backend extra, porque cada nodo aloja un solo microservicio.
 
-Los cuatro nodos de trabajo deben estar `Ready`, ser schedulable y no tener taints `NoSchedule` / `NoExecute` no tolerados. Los manifests usan etiquetas de nodo y hostname, así que prueban separación entre **nodos Kubernetes**. Si la cátedra interpreta “nodos físicos” literalmente, cada nodo debe ejecutarse en un host físico diferente; varios nodos Minikube en una laptop comparten el mismo host físico y solo demuestran separación lógica.
+Los nodos con rol deben estar `Ready`, ser schedulable y no tener taints `NoSchedule` / `NoExecute` no tolerados. Los manifests usan etiquetas de nodo y hostname, así que prueban separación entre **nodos Kubernetes**.
+
+Las reglas garantizan que cada microservicio quede en un nodo `backend` distinto, pero en cuál de los tres cae cada uno lo decide el scheduler. Para que el cluster quede igual a la asignación de referencia, después del primer despliegue se corre `place-services.sh` (ver [Ubicar cada servicio en su nodo](#ubicar-cada-servicio-en-su-nodo)). Una vez ubicados, los Pods se mantienen en su nodo en los reinicios y en los rolling updates.
 
 Los PV actuales son estáticos y usan `hostPath`, que guarda los datos en el disco local del nodo. Por eso la base de datos y los servicios que montan estos volúmenes se restringen al nodo `ops`, y ese nodo debe tener al menos 5–6 GB de memoria disponible. Sus manifiestos conservan la etiqueta heredada `all` para no requerir una modificación de volúmenes persistentes existentes; `configure-nodes.sh` quita esa etiqueta de los nodos antes de asignar los roles, así que solo `ops` coincide. Si reutilizas un cluster con datos, asigna como `ops` el mismo nodo que ya contiene los directorios `/mnt/data`; moverlos requiere migrar los datos. Esta topología sirve para el entorno docente/local; no aporta almacenamiento replicado ni alta disponibilidad.
 
@@ -27,7 +41,7 @@ Los PV actuales son estáticos y usan `hostPath`, que guarda los datos en el dis
 
 ### 1. Preparar el cluster
 
-Usa un cluster con al menos cuatro nodos de trabajo schedulable: uno para `ops` y tres para backend. Crea el perfil multinodo desde el inicio, en lugar de añadir nodos a un perfil de una sola máquina. Este comando crea un perfil separado y conserva cualquier perfil Minikube existente:
+Usa un cluster de 5 nodos. Crea el perfil multinodo desde el inicio, en lugar de añadir nodos a un perfil de una sola máquina. Este comando crea un perfil separado y conserva cualquier perfil Minikube existente:
 
 ```bash
 minikube start --profile pharmago --nodes=5
@@ -42,16 +56,15 @@ El comando anterior indica el número de nodos, no dimensiona la memoria para es
 
 ### 2. Asignar roles a los nodos
 
-Desde esta carpeta, el script valida disponibilidad, estado `Ready`, cordon y taints; luego etiqueta exactamente un nodo `ops` y tres nodos `backend`:
+Desde esta carpeta, con la asignación de referencia (en Windows, desde Git Bash):
 
 ```bash
 chmod +x configure-nodes.sh
-# Reemplaza los cuatro nombres por nodos distintos listados por kubectl get nodes.
-./configure-nodes.sh NODE_OPS NODE_GATEWAY NODE_USERS NODE_PHARMACY
+./configure-nodes.sh pharmago-m02 pharmago-m03 pharmago pharmago-m04
 kubectl get nodes -L node-type
 ```
 
-Reemplaza cada argumento por el nombre que muestra `kubectl get nodes`. El script reserva la etiqueta `node-type` para esta topología y quita valores anteriores de esa misma etiqueta para evitar que etiquetas antiguas (`all`, por ejemplo) alteren la colocación.
+Los argumentos son, en orden, el nodo `ops` y los nodos `backend` de gateway, users y pharmacy. `pharmago-m05` queda sin rol. El script valida que los nodos existan, estén `Ready`, sean schedulable y no tengan taints que bloqueen los Pods. También reserva la etiqueta `node-type` para esta topología: quita los valores anteriores de todos los nodos para que una etiqueta vieja (`all`, por ejemplo) no altere la colocación.
 
 ### 3. Construir y cargar imágenes Docker
 
@@ -93,19 +106,7 @@ minikube image load pharmago-ui:latest
 
 **IMPORTANTE**: Asegúrate de haber construido y cargado las imágenes Docker primero (paso 3).
 
-El script `apply-k8s.sh` comprueba que el contexto de `kubectl` responde y que hay al menos tres nodos `backend` y exactamente un nodo `ops` en estado `Ready`. Si el preflight falla, corrige la topología antes de aplicar los manifests.
-
-Si usas PowerShell, asigna las etiquetas manualmente a cuatro nodos distintos y luego usa `apply-k8s.ps1`:
-
-```powershell
-# Si el cluster tiene etiquetas node-type previas (por ejemplo all), quítalas primero:
-kubectl label node OLD_NODE node-type-
-kubectl label node NODE_OPS node-type=ops --overwrite
-kubectl label node NODE_GATEWAY node-type=backend --overwrite
-kubectl label node NODE_USERS node-type=backend --overwrite
-kubectl label node NODE_PHARMACY node-type=backend --overwrite
-kubectl get nodes -L node-type
-```
+El script `apply-k8s.sh` (o `apply-k8s.ps1` en PowerShell) comprueba que el contexto de `kubectl` responde y que hay al menos tres nodos `backend` y exactamente un nodo `ops` en estado `Ready`. Si el preflight falla, corrige la topología con `configure-nodes.sh` antes de aplicar los manifests.
 
 ### Opción 1: Script automatizado (Recomendado)
 
@@ -153,6 +154,18 @@ kubectl apply -f deployments/backend/
 kubectl apply -f services/frontend/
 kubectl apply -f deployments/frontend/
 ```
+
+## Ubicar cada servicio en su nodo
+
+Después del primer despliegue, `place-services.sh` deja cada microservicio en el nodo de la asignación de referencia: users en `pharmago`, gateway y UI en `pharmago-m03`, y pharmacy en `pharmago-m04`.
+
+```bash
+cd k8s
+chmod +x place-services.sh
+./place-services.sh
+```
+
+El script baja los tres microservicios y la UI a 0 réplicas y los vuelve a subir de a uno. Para que el scheduler elija el nodo correcto, bloquea temporalmente (`kubectl cordon`) los nodos que no corresponden, y al terminar los desbloquea aunque algo falle. Durante esos ~2 minutos la aplicación no atiende requests, así que se corre una sola vez, al montar el cluster. Después los Pods se mantienen en su nodo en los reinicios y en los rolling updates.
 
 ## Verificación
 
@@ -521,6 +534,7 @@ k8s/
 ├── build-images.sh
 ├── configure-nodes.sh
 ├── apply-k8s.sh
+├── place-services.sh
 ├── test-zero-downtime.sh
 ├── cleanup.sh
 └── README-k8s.md
