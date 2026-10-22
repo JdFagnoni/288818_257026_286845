@@ -1,7 +1,7 @@
 # Línea base: métricas de referencia
 
-Fecha: 2026-10-21 18:44 (UTC-3) · Ventana: últimos 15m · Fuente: Prometheus
-Versión: main en 6b996db (ítems 1 y 3 aplicados)
+Fecha: 2026-10-21 22:03 (UTC-3) · Ventana: últimos 15m · Fuente: Prometheus
+Topología: 5 nodos (ver docs/evidencia/01-plataforma)
 Tráfico: 1 request cada 4 s al gateway, rotando /api/drug, /api/pharmacy y /test-health (pod baseline-traffic)
 
 ## Tráfico por endpoint (req/s)
@@ -12,43 +12,43 @@ Tráfico: 1 request cada 4 s al gateway, rotando /api/drug, /api/pharmacy y /tes
   /metrics                                         0.402
 
 ## Latencia promedio por endpoint (ms)
-  /api/drug                                        3.74
-  /api/pharmacy                                    4.31
-  /health                                          0.10
-  /metrics                                         2.03
+  /api/drug                                        4.83
+  /api/pharmacy                                    2.45
+  /health                                          0.16
+  /metrics                                         0.38
 
 ## Latencia p95 por endpoint (ms)
-  /api/drug                                        7.81
-  /api/pharmacy                                    13.75
-  /health                                          4.76
-  /metrics                                         4.84
+  /api/drug                                        4.95
+  /api/pharmacy                                    4.95
+  /health                                          4.79
+  /metrics                                         4.82
 
 ## Tasa de error total (%)
   total                                            0.00
 
 ## CPU de nodo (%)
-  Limitación: node-exporter se scrapea a través de un Service, así que es una sola serie que mezcla los 4 nodos (issue #6).
-  node-exporter:9100                               9.6
+  Limitación: node-exporter se scrapea a través de un Service, así que es una sola serie que mezcla los nodos (issue #6).
+  node-exporter:9100                               11.8
 
 ## Memoria usada de nodo (%)
   Misma limitación que la CPU de nodo.
-  node-exporter:9100                               70.1
+  node-exporter:9100                               69.4
 
 ## CPU por pod del backend (% de un core)
-  pharmago-api-gateway-6dfddddd9f-52xbz            0.30
-  pharmago-api-gateway-6dfddddd9f-cgl4l            0.37
-  pharmago-pharmacy-service-776c4f9bc-87hqf        0.22
-  pharmago-pharmacy-service-776c4f9bc-r8j9c        0.24
-  pharmago-users-service-6f7bbf8555-842fg          0.29
-  pharmago-users-service-6f7bbf8555-jzfdv          0.17
+  pharmago-api-gateway-7b89664987-669lx            0.38
+  pharmago-api-gateway-7b89664987-bdjqp            0.33
+  pharmago-pharmacy-service-6488b8cb58-hnkz4       0.28
+  pharmago-pharmacy-service-6488b8cb58-sm2j9       0.37
+  pharmago-users-service-7cb7dc698-4dhh5           0.25
+  pharmago-users-service-7cb7dc698-tmxff           0.30
 
 ## Memoria por pod del backend (MiB)
-  pharmago-api-gateway-6dfddddd9f-52xbz            56.0
-  pharmago-api-gateway-6dfddddd9f-cgl4l            58.3
-  pharmago-pharmacy-service-776c4f9bc-87hqf        92.1
-  pharmago-pharmacy-service-776c4f9bc-r8j9c        85.6
-  pharmago-users-service-6f7bbf8555-842fg          76.1
-  pharmago-users-service-6f7bbf8555-jzfdv          74.6
+  pharmago-api-gateway-7b89664987-669lx            62.3
+  pharmago-api-gateway-7b89664987-bdjqp            47.2
+  pharmago-pharmacy-service-6488b8cb58-hnkz4       81.6
+  pharmago-pharmacy-service-6488b8cb58-sm2j9       85.4
+  pharmago-users-service-7cb7dc698-4dhh5           69.0
+  pharmago-users-service-7cb7dc698-tmxff           72.6
 
 ## Consultas PromQL usadas
 - Tráfico por endpoint (req/s): sum by (endpoint) (rate(pharmago_http_requests_total[15m]))

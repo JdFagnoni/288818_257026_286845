@@ -1,6 +1,6 @@
 # Prueba de despliegue sin caída
 
-Fecha: 2026-10-21 18:45 (UTC-3) · Versión: main en 6b996db
+Fecha: 2026-10-21 22:07 (UTC-3) · Topología: 5 nodos (ver docs/evidencia/01-plataforma)
 Comando: cd k8s && ./test-zero-downtime.sh  (reemplaza gateway, users y pharmacy, uno tras otro)
 Tráfico de fondo: pod baseline-traffic, 1 request cada 4 s
 Código de salida: 0
@@ -9,18 +9,18 @@ Código de salida: 0
 Lanzando el pod de prueba...
 Línea de base (10s)...
 
-18:45:20 Reemplazando pharmago-api-gateway...
+22:07:23 Reemplazando pharmago-api-gateway...
 deployment "pharmago-api-gateway" successfully rolled out
 
-18:45:40 Reemplazando pharmago-users-service...
+22:08:12 Reemplazando pharmago-users-service...
 deployment "pharmago-users-service" successfully rolled out
 
-18:46:17 Reemplazando pharmago-pharmacy-service...
+22:08:58 Reemplazando pharmago-pharmacy-service...
 deployment "pharmago-pharmacy-service" successfully rolled out
 
 Cola (10s)...
 
 === Resultado ===
-Requests:  164
+Requests:  192
 Fallidos:  0
 Disponibilidad: 100.00%
