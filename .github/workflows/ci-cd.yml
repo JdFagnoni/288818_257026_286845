@@ -1,0 +1,187 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# A new push to a PR cancels its previous run; runs on main always finish so
+# an image publication is never cut in half.
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (build + tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: Implementacion K8S/Codigo/Backend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Restore
+        run: dotnet restore PharmaGo.sln
+
+      - name: Build
+        run: dotnet build PharmaGo.sln --configuration Release --no-restore
+
+      - name: Test
+        run: >
+          dotnet test PharmaGo.sln --configuration Release --no-build
+          --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-test-results
+          path: Implementacion K8S/Codigo/Backend/TestResults
+          if-no-files-found: ignore
+          retention-days: 7
+
+  frontend:
+    name: Frontend (build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: Implementacion K8S/Codigo/Frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      # Same Node version as the frontend Dockerfile (Angular 14).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 16
+          cache: npm
+          cache-dependency-path: Implementacion K8S/Codigo/Frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+  manifests:
+    name: Kubernetes manifests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install kubeconform
+        run: |
+          curl -sSfL https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin kubeconform
+
+      - name: Validate manifests
+        run: kubeconform -strict -summary "Implementacion K8S/Codigo/k8s"
+
+  images:
+    name: Image ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: pharmago-api-gateway
+            context: Implementacion K8S/Codigo/Backend
+            dockerfile: Implementacion K8S/Codigo/Backend/PharmaGo.ApiGateway/Dockerfile
+          - image: pharmago-users-service
+            context: Implementacion K8S/Codigo/Backend
+            dockerfile: Implementacion K8S/Codigo/Backend/PharmaGo.UsersService/Dockerfile
+          - image: pharmago-pharmacy-service
+            context: Implementacion K8S/Codigo/Backend
+            dockerfile: Implementacion K8S/Codigo/Backend/PharmaGo.PharmacyService/Dockerfile
+          - image: pharmago-ui
+            context: Implementacion K8S/Codigo/Frontend
+            dockerfile: Implementacion K8S/Codigo/Frontend/Dockerfile
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: false
+          tags: ${{ matrix.image }}:ci
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  # Continuous delivery: only after every check passed on main, publish the
+  # images to GitHub Container Registry tagged with the commit and as latest.
+  publish:
+    name: Publish ${{ matrix.image }}
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [backend, frontend, manifests, images]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: pharmago-api-gateway
+            context: Implementacion K8S/Codigo/Backend
+            dockerfile: Implementacion K8S/Codigo/Backend/PharmaGo.ApiGateway/Dockerfile
+          - image: pharmago-users-service
+            context: Implementacion K8S/Codigo/Backend
+            dockerfile: Implementacion K8S/Codigo/Backend/PharmaGo.UsersService/Dockerfile
+          - image: pharmago-pharmacy-service
+            context: Implementacion K8S/Codigo/Backend
+            dockerfile: Implementacion K8S/Codigo/Backend/PharmaGo.PharmacyService/Dockerfile
+          - image: pharmago-ui
+            context: Implementacion K8S/Codigo/Frontend
+            dockerfile: Implementacion K8S/Codigo/Frontend/Dockerfile
+    steps:
+      - uses: actions/checkout@v7
+
+      # Registry paths must be lowercase; the repository owner is not.
+      - name: Resolve registry owner
+        id: registry
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image tags and labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ steps.registry.outputs.owner }}/${{ matrix.image }}
+          tags: |
+            type=sha
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
