@@ -3,8 +3,10 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using AspNetCoreRateLimit;
 using PharmaGo.ApiGateway.Middleware;
+using PharmaGo.ApiGateway.Resilience;
 using Instrumentation;
 using InstrumentationInterface;
+using Yarp.ReverseProxy.Forwarder;
 using Yarp.ReverseProxy.Transforms;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,7 +21,7 @@ if (rateLimitMode.Equals("IP", StringComparison.OrdinalIgnoreCase))
     builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
     builder.Services.Configure<IpRateLimitPolicies>(builder.Configuration.GetSection("IpRateLimitPolicies"));
     builder.Services.AddInMemoryRateLimiting();
-    builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+    builder.Services.AddSingleton<IRateLimitConfiguration, ConnectionIpRateLimitConfiguration>();
 }
 
 builder.Services.AddReverseProxy()
@@ -38,6 +40,10 @@ builder.Services.AddReverseProxy()
             return default;
         });
     });
+
+// Circuit breaker, retry y timeout en las llamadas del gateway a cada microservicio
+builder.Services.Configure<ResilienceOptions>(builder.Configuration.GetSection("Resilience"));
+builder.Services.AddSingleton<IForwarderHttpClientFactory, ResilientForwarderHttpClientFactory>();
 
 builder.Services.AddSingleton<ICustomMetrics, CustomMetrics>();
 

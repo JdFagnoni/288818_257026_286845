@@ -31,9 +31,14 @@ RUN dotnet build "PharmaGo.PharmacyService.csproj" -c Release -o /app/build
 
 FROM build AS publish
 RUN dotnet publish "PharmaGo.PharmacyService.csproj" -c Release -o /app/publish
+# Los formatos de exportación son plugins que ExportManager carga en tiempo de
+# ejecución desde ./Exporters. Solo se copia el DLL del plugin: ExportationModel
+# y Newtonsoft.Json ya vienen con el servicio (ver PharmaGo.PharmacyService.csproj).
+RUN dotnet build "/src/JSONExporter/JSONExporter.csproj" -c Release -o /app/exporters
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+COPY --from=publish /app/exporters/JSONExporter.dll ./Exporters/
 ENTRYPOINT ["dotnet", "PharmaGo.PharmacyService.dll"]
 

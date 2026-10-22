@@ -48,6 +48,7 @@ app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 app.UseMetricsMiddleware();
+app.UseMiddleware<DatabaseUnavailableMiddleware>();
 
 app.MapControllers();
 app.MapPrometheusScrapingEndpoint();

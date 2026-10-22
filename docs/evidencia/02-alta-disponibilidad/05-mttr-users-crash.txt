@@ -1,0 +1,21 @@
+# MTTR de users matando el proceso
+
+Fecha: 2026-10-22 19:55 (UTC-3) · Topología: 5 nodos (ver docs/evidencia/01-plataforma)
+Comando: cd k8s && ./measure-mttr.sh pharmago-users-service crash
+Versión: commit 3960d26 (código final del ítem 2)
+Código de salida: 0
+
+=== MTTR de pharmago-users-service (modo: crash, 3 mediciones) ===
+
+[1/3] 19:55:31 Falla en pharmago-users-service-6d79ff4646-csvxh (crash)...
+[1/3] 19:55:38 Recuperado: pharmago-users-service-6d79ff4646-csvxh Ready en 6.8s
+
+[2/3] 19:55:44 Falla en pharmago-users-service-6d79ff4646-z57ck (crash)...
+[2/3] 19:55:51 Recuperado: pharmago-users-service-6d79ff4646-z57ck Ready en 7.3s
+
+[3/3] 19:55:57 Falla en pharmago-users-service-6d79ff4646-csvxh (crash)...
+[3/3] 19:56:15 Recuperado: pharmago-users-service-6d79ff4646-csvxh Ready en 17.7s
+
+=== Resultado ===
+pharmago-users-service (crash): MTTR promedio 10.6s (mín 6.8s, máx 17.7s, 3 mediciones)
+La precisión es de ~1s: el script consulta el estado cada 0.5s vía kubectl.

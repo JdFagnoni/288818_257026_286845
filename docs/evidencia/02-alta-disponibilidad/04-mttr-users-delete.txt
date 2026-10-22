@@ -1,0 +1,21 @@
+# MTTR de users borrando un pod
+
+Fecha: 2026-10-22 19:54 (UTC-3) · Topología: 5 nodos (ver docs/evidencia/01-plataforma)
+Comando: cd k8s && ./measure-mttr.sh pharmago-users-service delete
+Versión: commit 3960d26 (código final del ítem 2)
+Código de salida: 0
+
+=== MTTR de pharmago-users-service (modo: delete, 3 mediciones) ===
+
+[1/3] 19:54:57 Falla en pharmago-users-service-6d79ff4646-thm7q (delete)...
+[1/3] 19:55:02 Recuperado: pharmago-users-service-6d79ff4646-ws7bs Ready en 5.5s
+
+[2/3] 19:55:08 Falla en pharmago-users-service-6d79ff4646-ws7bs (delete)...
+[2/3] 19:55:14 Recuperado: pharmago-users-service-6d79ff4646-4n8sx Ready en 5.6s
+
+[3/3] 19:55:19 Falla en pharmago-users-service-6d79ff4646-4n8sx (delete)...
+[3/3] 19:55:25 Recuperado: pharmago-users-service-6d79ff4646-csvxh Ready en 5.6s
+
+=== Resultado ===
+pharmago-users-service (delete): MTTR promedio 5.6s (mín 5.5s, máx 5.6s, 3 mediciones)
+La precisión es de ~1s: el script consulta el estado cada 0.5s vía kubectl.

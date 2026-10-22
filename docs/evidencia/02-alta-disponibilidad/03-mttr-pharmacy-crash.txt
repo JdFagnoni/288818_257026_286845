@@ -1,0 +1,21 @@
+# MTTR de pharmacy matando el proceso
+
+Fecha: 2026-10-22 19:54 (UTC-3) · Topología: 5 nodos (ver docs/evidencia/01-plataforma)
+Comando: cd k8s && ./measure-mttr.sh pharmago-pharmacy-service crash
+Versión: commit 3960d26 (código final del ítem 2)
+Código de salida: 0
+
+=== MTTR de pharmago-pharmacy-service (modo: crash, 3 mediciones) ===
+
+[1/3] 19:54:07 Falla en pharmago-pharmacy-service-69c46b49dc-9ztcg (crash)...
+[1/3] 19:54:15 Recuperado: pharmago-pharmacy-service-69c46b49dc-9ztcg Ready en 7.8s
+
+[2/3] 19:54:21 Falla en pharmago-pharmacy-service-69c46b49dc-x4cl4 (crash)...
+[2/3] 19:54:26 Recuperado: pharmago-pharmacy-service-69c46b49dc-x4cl4 Ready en 5.4s
+
+[3/3] 19:54:32 Falla en pharmago-pharmacy-service-69c46b49dc-9ztcg (crash)...
+[3/3] 19:54:51 Recuperado: pharmago-pharmacy-service-69c46b49dc-9ztcg Ready en 18.9s
+
+=== Resultado ===
+pharmago-pharmacy-service (crash): MTTR promedio 10.7s (mín 5.4s, máx 18.9s, 3 mediciones)
+La precisión es de ~1s: el script consulta el estado cada 0.5s vía kubectl.

@@ -24,6 +24,10 @@ public class ExceptionFilter : IExceptionFilter
         {
             context.Result = new JsonResult(new { Message = "Invalid token format" }){ StatusCode = 400 };
         }
+        catch (Exception e) when (DatabaseUnavailable.Matches(e))
+        {
+            context.Result = new JsonResult(new { Message = DatabaseUnavailable.Message }) { StatusCode = 503 };
+        }
         catch (Exception e)
         {
             context.Result = new JsonResult(new { Message = e.Message }) { StatusCode = 500 };

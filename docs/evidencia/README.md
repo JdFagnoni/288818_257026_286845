@@ -47,6 +47,20 @@ La topología del cluster (nodos y pods) está en [01-plataforma/01-nodos-y-pods
 | [01-nodos-y-pods.png](01-plataforma/01-nodos-y-pods.png) | Los 5 nodos con su rol (`node-type`): `pharmago` (control-plane), `pharmago-m03` y `pharmago-m04` como `backend`, `pharmago-m02` como `ops` y `pharmago-m05` sin rol. Debajo, todos los pods del namespace `pharmago` con el nodo donde corre cada uno: cada microservicio tiene sus 2 réplicas en un nodo propio, como en el diagrama. | 2026-10-21 |
 | [02-diagrama-despliegue.png](01-plataforma/02-diagrama-despliegue.png) | Diagrama de despliegue generado desde [deployment-diagram.md](../../Implementacion%20K8S/Codigo/k8s/deployment-diagram.md): servicios, pods por nodo, DaemonSets y flujos de telemetría y logs. | 2026-10-21 |
 
+### 02 · Alta disponibilidad
+
+Técnica: 2 réplicas por microservicio, y en el gateway timeout de 5 s por intento, 2 reintentos con backoff y jitter (solo `GET`, `HEAD` y `OPTIONS`) y un circuit breaker por microservicio que se abre tras 5 fallas seguidas durante 5 s. Solo cuentan como falla los errores de red, los timeouts y los `502`/`503`/`504`; pharmacy y users responden `503` cuando no responde la base. La explicación está en [README-k8s.md, sección "Resiliencia ante fallas"](../../Implementacion%20K8S/Codigo/k8s/README-k8s.md#resiliencia-ante-fallas).
+
+MTTR = tiempo desde que se provoca la falla hasta que hay un pod `Ready` que atiende en su lugar. `delete` borra el pod (falla del pod o del nodo) y `crash` mata el proceso dentro del contenedor (caída de la aplicación).
+
+| Archivo | Qué muestra | Fecha |
+|---|---|---|
+| [01-test-circuit-breaker.txt](02-alta-disponibilidad/01-test-circuit-breaker.txt) | Salida de `test-circuit-breaker.sh` con pharmacy apagado 40 s. Mientras está caído, el gateway responde casi todo con `503` inmediatos (circuito abierto) en vez de dejar esperando los requests. Los logs muestran reintentos, el circuito ABIERTO, un intento SEMIABIERTO cada 5 s y el CERRADO cuando pharmacy vuelve. Después de restaurarlo hay unos 5 s de `503` hasta que el circuito prueba de nuevo. | 2026-10-22 |
+| [02-mttr-pharmacy-delete.txt](02-alta-disponibilidad/02-mttr-pharmacy-delete.txt) | `measure-mttr.sh` de pharmacy borrando un pod: MTTR promedio 6.8 s (5.5 a 7.5 s). | 2026-10-22 |
+| [03-mttr-pharmacy-crash.txt](02-alta-disponibilidad/03-mttr-pharmacy-crash.txt) | Pharmacy matando el proceso: promedio 10.7 s. Las dos primeras mediciones dan 7.8 y 5.4 s. La tercera da 18.9 s porque, con 2 pods y 3 mediciones, un pod se cae por segunda vez y Kubernetes espera 10 s antes de reiniciarlo (backoff de `CrashLoopBackOff`). | 2026-10-22 |
+| [04-mttr-users-delete.txt](02-alta-disponibilidad/04-mttr-users-delete.txt) | Users borrando un pod: MTTR promedio 5.6 s (5.5 a 5.6 s). | 2026-10-22 |
+| [05-mttr-users-crash.txt](02-alta-disponibilidad/05-mttr-users-crash.txt) | Users matando el proceso: promedio 10.6 s (6.8 a 17.7 s). La medición más alta tiene el mismo motivo que en pharmacy. | 2026-10-22 |
+
 ### 03 · Despliegues seguros
 
 Técnica: rolling update (`maxSurge: 1`, `maxUnavailable: 0`, `minReadySeconds: 5`), `preStop` de 5 s, probes `httpGet /health` y warm-up de la base en pharmacy. La explicación está en [README-k8s.md, sección "Despliegue sin caída"](../../Implementacion%20K8S/Codigo/k8s/README-k8s.md#despliegue-sin-caída). La prueba corrió con el mismo tráfico de fondo que la línea base.
