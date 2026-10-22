@@ -42,8 +42,6 @@ La topología del cluster en esta versión (nodos y pods) está en [01-plataform
 
 ### 01 · Plataforma
 
-El requisito de que los microservicios no compartan "nodos físicos" se cumple con nodos de Kubernetes distintos dentro de la misma máquina (cluster Minikube multinodo). El docente confirmó esta interpretación ante la consulta del equipo.
-
 | Archivo | Qué muestra | Fecha |
 |---|---|---|
 | [01-nodos-y-pods.png](01-plataforma/01-nodos-y-pods.png) | Los 4 nodos con su rol (`node-type`: 1 `ops` y 3 `backend`) y todos los pods del namespace `pharmago`, con el nodo donde corre cada uno. Cada microservicio tiene sus 2 réplicas en un nodo propio. Cluster de 4 nodos (IPs `192.168.58.x`). | 2026-10-21 |
