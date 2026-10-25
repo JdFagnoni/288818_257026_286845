@@ -1,5 +1,7 @@
 # Guía de Logging con Elasticsearch + Kibana + Logstash - PharmaGo
 
+Para Kubernetes, la configuración vigente usa consola JSON, Fluent Bit (formato CRI/containerd), Elasticsearch y Kibana; ver [la guía de telemetría](../k8s/README-telemetry.md). Las secciones de Logstash se refieren al entorno Docker Compose.
+
 ## 📋 Configuración Implementada
 
 ### Stack de Logging Completo
