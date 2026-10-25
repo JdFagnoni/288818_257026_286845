@@ -13,6 +13,7 @@ spec:
       labels:
         app: otlp-collector
     spec:
+      serviceAccountName: otlp-collector
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -23,14 +24,41 @@ spec:
                 values: [ops]
       containers:
       - name: otlp-collector
-        image: otel/opentelemetry-collector-contrib:latest
+        image: otel/opentelemetry-collector-contrib:0.111.0
         ports:
         - containerPort: 4317
           name: otlp-grpc
-        - containerPort: 8889
-          name: prometheus
+        - containerPort: 13133
+          name: health
         args:
           - "--config=/etc/otel-collector-config.yaml"
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            cpu: "1"
+            memory: 768Mi
+        startupProbe:
+          httpGet:
+            path: /
+            port: health
+          periodSeconds: 5
+          failureThreshold: 24
+        readinessProbe:
+          httpGet:
+            path: /
+            port: health
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        livenessProbe:
+          httpGet:
+            path: /
+            port: health
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 5
         volumeMounts:
         - name: otel-config
           mountPath: /etc/otel-collector-config.yaml

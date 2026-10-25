@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otlp-collector-scrape
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otlp-collector-scrape
+subjects:
+  - kind: ServiceAccount
+    name: otlp-collector
+    namespace: pharmago

@@ -1,0 +1,285 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-alerts
+  namespace: pharmago
+data:
+  pharmago-alerts.json: |
+    {
+      "apiVersion": 1,
+      "groups": [
+        {
+          "orgId": 1,
+          "name": "Infraestructura PharmaGo",
+          "folder": "PharmaGo",
+          "interval": "30s",
+          "rules": [
+            {
+              "uid": "node-cpu-high",
+              "title": "CPU de nodo alta",
+              "condition": "B",
+              "data": [
+                {
+                  "refId": "A",
+                  "datasourceUid": "prometheus",
+                  "relativeTimeRange": {
+                    "from": 300,
+                    "to": 0
+                  },
+                  "model": {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "100 * (1 - avg by (node) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])))",
+                    "instant": true,
+                    "range": false,
+                    "refId": "A"
+                  }
+                },
+                {
+                  "refId": "B",
+                  "datasourceUid": "__expr__",
+                  "relativeTimeRange": {
+                    "from": 0,
+                    "to": 0
+                  },
+                  "model": {
+                    "datasource": {
+                      "type": "__expr__",
+                      "uid": "__expr__"
+                    },
+                    "expression": "$A > 85",
+                    "type": "math",
+                    "refId": "B"
+                  }
+                }
+              ],
+              "noDataState": "NoData",
+              "execErrState": "Alerting",
+              "for": "2m",
+              "annotations": {
+                "summary": "CPU del nodo supera 85% durante 2 minutos."
+              },
+              "labels": {
+                "severity": "warning",
+                "component": "telemetry"
+              }
+            },
+            {
+              "uid": "node-memory-high",
+              "title": "Memoria de nodo alta",
+              "condition": "B",
+              "data": [
+                {
+                  "refId": "A",
+                  "datasourceUid": "prometheus",
+                  "relativeTimeRange": {
+                    "from": 300,
+                    "to": 0
+                  },
+                  "model": {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)",
+                    "instant": true,
+                    "range": false,
+                    "refId": "A"
+                  }
+                },
+                {
+                  "refId": "B",
+                  "datasourceUid": "__expr__",
+                  "relativeTimeRange": {
+                    "from": 0,
+                    "to": 0
+                  },
+                  "model": {
+                    "datasource": {
+                      "type": "__expr__",
+                      "uid": "__expr__"
+                    },
+                    "expression": "$A > 90",
+                    "type": "math",
+                    "refId": "B"
+                  }
+                }
+              ],
+              "noDataState": "NoData",
+              "execErrState": "Alerting",
+              "for": "2m",
+              "annotations": {
+                "summary": "Memoria usada del nodo supera 90% durante 2 minutos."
+              },
+              "labels": {
+                "severity": "warning",
+                "component": "telemetry"
+              }
+            },
+            {
+              "uid": "node-disk-low",
+              "title": "Espacio de disco bajo",
+              "condition": "B",
+              "data": [
+                {
+                  "refId": "A",
+                  "datasourceUid": "prometheus",
+                  "relativeTimeRange": {
+                    "from": 300,
+                    "to": 0
+                  },
+                  "model": {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "min by (node) (100 * node_filesystem_avail_bytes{mountpoint=~\"/|/data\",fstype!~\"tmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{mountpoint=~\"/|/data\",fstype!~\"tmpfs|overlay|squashfs\"})",
+                    "instant": true,
+                    "range": false,
+                    "refId": "A"
+                  }
+                },
+                {
+                  "refId": "B",
+                  "datasourceUid": "__expr__",
+                  "relativeTimeRange": {
+                    "from": 0,
+                    "to": 0
+                  },
+                  "model": {
+                    "datasource": {
+                      "type": "__expr__",
+                      "uid": "__expr__"
+                    },
+                    "expression": "$A < 15",
+                    "type": "math",
+                    "refId": "B"
+                  }
+                }
+              ],
+              "noDataState": "NoData",
+              "execErrState": "Alerting",
+              "for": "2m",
+              "annotations": {
+                "summary": "Espacio disponible en el filesystem principal menor a 15% durante 2 minutos."
+              },
+              "labels": {
+                "severity": "warning",
+                "component": "telemetry"
+              }
+            },
+            {
+              "uid": "node-network-errors",
+              "title": "Errores de red de nodo",
+              "condition": "B",
+              "data": [
+                {
+                  "refId": "A",
+                  "datasourceUid": "prometheus",
+                  "relativeTimeRange": {
+                    "from": 300,
+                    "to": 0
+                  },
+                  "model": {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum by (node) (rate(node_network_receive_errs_total{device!=\"lo\"}[5m]) + rate(node_network_transmit_errs_total{device!=\"lo\"}[5m]))",
+                    "instant": true,
+                    "range": false,
+                    "refId": "A"
+                  }
+                },
+                {
+                  "refId": "B",
+                  "datasourceUid": "__expr__",
+                  "relativeTimeRange": {
+                    "from": 0,
+                    "to": 0
+                  },
+                  "model": {
+                    "datasource": {
+                      "type": "__expr__",
+                      "uid": "__expr__"
+                    },
+                    "expression": "$A > 0",
+                    "type": "math",
+                    "refId": "B"
+                  }
+                }
+              ],
+              "noDataState": "NoData",
+              "execErrState": "Alerting",
+              "for": "2m",
+              "annotations": {
+                "summary": "Hay errores de recepción o transmisión de red durante 2 minutos."
+              },
+              "labels": {
+                "severity": "warning",
+                "component": "telemetry"
+              }
+            },
+            {
+              "uid": "pod-cpu-high",
+              "title": "CPU de pod alta",
+              "condition": "B",
+              "data": [
+                {
+                  "refId": "A",
+                  "datasourceUid": "prometheus",
+                  "relativeTimeRange": {
+                    "from": 300,
+                    "to": 0
+                  },
+                  "model": {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"pharmago\",container!=\"\",container!=\"POD\"}[5m]))",
+                    "instant": true,
+                    "range": false,
+                    "refId": "A"
+                  }
+                },
+                {
+                  "refId": "B",
+                  "datasourceUid": "__expr__",
+                  "relativeTimeRange": {
+                    "from": 0,
+                    "to": 0
+                  },
+                  "model": {
+                    "datasource": {
+                      "type": "__expr__",
+                      "uid": "__expr__"
+                    },
+                    "expression": "$A > 0.4",
+                    "type": "math",
+                    "refId": "B"
+                  }
+                }
+              ],
+              "noDataState": "NoData",
+              "execErrState": "Alerting",
+              "for": "2m",
+              "annotations": {
+                "summary": "Un pod usa más de 0.4 núcleos de CPU durante 2 minutos."
+              },
+              "labels": {
+                "severity": "warning",
+                "component": "telemetry"
+              }
+            }
+          ]
+        }
+      ]
+    }
