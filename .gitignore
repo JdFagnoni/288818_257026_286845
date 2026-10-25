@@ -61,3 +61,10 @@ docker-compose.override.yml
 # === Kubernetes ===
 # PIDs que guarda k8s/port-forward.sh
 .port-forward.pids
+
+# === Python / análisis de anomalías ===
+__pycache__/
+.venv/
+.ipynb_checkpoints/
+Implementacion K8S/Codigo/anomaly_detection/data/
+Implementacion K8S/Codigo/anomaly_detection/output/
