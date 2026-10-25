@@ -55,6 +55,7 @@ spec:
           - '--web.console.libraries=/etc/prometheus/console_libraries'
           - '--web.console.templates=/etc/prometheus/consoles'
           - '--web.enable-lifecycle'
+          - '--web.enable-otlp-receiver'
         volumeMounts:
         - name: prometheus-config
           mountPath: /etc/prometheus/prometheus.yml

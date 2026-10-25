@@ -9,16 +9,161 @@ data:
       otlp:
         protocols:
           grpc:
-            endpoint: "0.0.0.0:4317"
+            endpoint: 0.0.0.0:4317
+      prometheus:
+        config:
+          scrape_configs:
+            # El cluster del obligatorio tiene estos cinco nodos fijos. El proxy
+            # del API server conserva TLS y evita exponer el kubelet directamente.
+            - job_name: cadvisor-pharmago
+              scrape_interval: 15s
+              scheme: https
+              metrics_path: /api/v1/nodes/pharmago/proxy/metrics/cadvisor
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+              tls_config:
+                ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              static_configs:
+                - targets: [kubernetes.default.svc:443]
+                  labels: {node: pharmago}
+              metric_relabel_configs:
+                - source_labels: [__name__]
+                  action: keep
+                  regex: container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total
+            - job_name: cadvisor-pharmago-m02
+              scrape_interval: 15s
+              scheme: https
+              metrics_path: /api/v1/nodes/pharmago-m02/proxy/metrics/cadvisor
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+              tls_config:
+                ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              static_configs:
+                - targets: [kubernetes.default.svc:443]
+                  labels: {node: pharmago-m02}
+              metric_relabel_configs:
+                - source_labels: [__name__]
+                  action: keep
+                  regex: container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total
+            - job_name: cadvisor-pharmago-m03
+              scrape_interval: 15s
+              scheme: https
+              metrics_path: /api/v1/nodes/pharmago-m03/proxy/metrics/cadvisor
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+              tls_config:
+                ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              static_configs:
+                - targets: [kubernetes.default.svc:443]
+                  labels: {node: pharmago-m03}
+              metric_relabel_configs:
+                - source_labels: [__name__]
+                  action: keep
+                  regex: container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total
+            - job_name: cadvisor-pharmago-m04
+              scrape_interval: 15s
+              scheme: https
+              metrics_path: /api/v1/nodes/pharmago-m04/proxy/metrics/cadvisor
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+              tls_config:
+                ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              static_configs:
+                - targets: [kubernetes.default.svc:443]
+                  labels: {node: pharmago-m04}
+              metric_relabel_configs:
+                - source_labels: [__name__]
+                  action: keep
+                  regex: container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total
+            - job_name: cadvisor-pharmago-m05
+              scrape_interval: 15s
+              scheme: https
+              metrics_path: /api/v1/nodes/pharmago-m05/proxy/metrics/cadvisor
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+              tls_config:
+                ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              static_configs:
+                - targets: [kubernetes.default.svc:443]
+                  labels: {node: pharmago-m05}
+              metric_relabel_configs:
+                - source_labels: [__name__]
+                  action: keep
+                  regex: container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_network_receive_bytes_total|container_network_transmit_bytes_total
+            - job_name: node-exporter
+              scrape_interval: 15s
+              kubernetes_sd_configs:
+                - role: pod
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_label_app]
+                  action: keep
+                  regex: node-exporter
+                - source_labels: [__meta_kubernetes_pod_node_name]
+                  target_label: node
+              metric_relabel_configs:
+                - source_labels: [__name__]
+                  action: keep
+                  regex: node_cpu_seconds_total|node_memory_MemAvailable_bytes|node_memory_MemTotal_bytes|node_filesystem_avail_bytes|node_filesystem_size_bytes|node_network_receive_bytes_total|node_network_transmit_bytes_total|node_network_receive_errs_total|node_network_transmit_errs_total
+
+      kubeletstats/pharmago:
+        collection_interval: 60s
+        auth_type: serviceAccount
+        endpoint: https://192.168.49.2:10250
+        insecure_skip_verify: true
+        metric_groups: [pod]
+      kubeletstats/pharmago-m02:
+        collection_interval: 60s
+        auth_type: serviceAccount
+        endpoint: https://192.168.49.3:10250
+        insecure_skip_verify: true
+        metric_groups: [pod]
+      kubeletstats/pharmago-m03:
+        collection_interval: 60s
+        auth_type: serviceAccount
+        endpoint: https://192.168.49.4:10250
+        insecure_skip_verify: true
+        metric_groups: [pod]
+      kubeletstats/pharmago-m04:
+        collection_interval: 60s
+        auth_type: serviceAccount
+        endpoint: https://192.168.49.5:10250
+        insecure_skip_verify: true
+        metric_groups: [pod]
+      kubeletstats/pharmago-m05:
+        collection_interval: 60s
+        auth_type: serviceAccount
+        endpoint: https://192.168.49.6:10250
+        insecure_skip_verify: true
+        metric_groups: [pod]
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+
+    processors:
+      batch:
+        timeout: 5s
+      filter/storage:
+        metrics:
+          include:
+            match_type: strict
+            metric_names: [k8s.pod.filesystem.usage]
 
     exporters:
-      prometheus:
-        endpoint: "0.0.0.0:8889"
-      debug: {}
+      otlphttp/prometheus:
+        endpoint: http://prometheus:9090/api/v1/otlp
+      otlp/jaeger:
+        endpoint: jaeger:4317
+        tls:
+          insecure: true
 
     service:
+      extensions: [health_check]
       pipelines:
         metrics:
+          receivers: [otlp, prometheus]
+          processors: [batch]
+          exporters: [otlphttp/prometheus]
+        metrics/storage:
+          receivers: [kubeletstats/pharmago, kubeletstats/pharmago-m02, kubeletstats/pharmago-m03, kubeletstats/pharmago-m04, kubeletstats/pharmago-m05]
+          processors: [filter/storage, batch]
+          exporters: [otlphttp/prometheus]
+        traces:
           receivers: [otlp]
-          exporters: [prometheus, debug]
-
+          processors: [batch]
+          exporters: [otlp/jaeger]

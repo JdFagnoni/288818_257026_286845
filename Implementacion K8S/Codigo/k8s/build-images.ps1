@@ -11,7 +11,7 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
 }
 
 # Verificar que minikube está corriendo
-$minikubeStatus = minikube status 2>&1
+$minikubeStatus = minikube -p pharmago status 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Minikube no está corriendo. Prepara primero el cluster multinodo siguiendo README-k8s.md." -ForegroundColor Red
     exit 1
@@ -30,7 +30,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "Error construyendo pharmago-users-service" -ForegroundColor Red
     exit 1 
 }
-minikube image load pharmago-users-service:latest
+minikube -p pharmago image load --overwrite=true pharmago-users-service:latest
 
 Write-Host "  - pharmago-pharmacy-service..." -ForegroundColor Cyan
 docker build -f PharmaGo.PharmacyService/Dockerfile -t pharmago-pharmacy-service:latest .
@@ -38,7 +38,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "Error construyendo pharmago-pharmacy-service" -ForegroundColor Red
     exit 1 
 }
-minikube image load pharmago-pharmacy-service:latest
+minikube -p pharmago image load --overwrite=true pharmago-pharmacy-service:latest
 
 Write-Host "  - pharmago-api-gateway..." -ForegroundColor Cyan
 docker build -f PharmaGo.ApiGateway/Dockerfile -t pharmago-api-gateway:latest .
@@ -46,7 +46,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "Error construyendo pharmago-api-gateway" -ForegroundColor Red
     exit 1 
 }
-minikube image load pharmago-api-gateway:latest
+minikube -p pharmago image load --overwrite=true pharmago-api-gateway:latest
 
 Write-Host "`nConstruyendo imagen de frontend..." -ForegroundColor Yellow
 Set-Location "$codeDir\Frontend"
@@ -57,11 +57,11 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "Error construyendo pharmago-ui" -ForegroundColor Red
     exit 1 
 }
-minikube image load pharmago-ui:latest
+minikube -p pharmago image load --overwrite=true pharmago-ui:latest
 
 Write-Host "`n=== Imágenes construidas y cargadas exitosamente ===" -ForegroundColor Green
 Write-Host "`nVerificando imágenes en Minikube..." -ForegroundColor Yellow
-minikube image ls | Select-String "pharmago"
+minikube -p pharmago image ls | Select-String "pharmago"
 
 Set-Location $scriptDir
 

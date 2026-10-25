@@ -44,6 +44,7 @@ kubectl apply -f configmaps/otel-collector-config.yaml
 kubectl apply -f configmaps/grafana-provisioning.yaml
 kubectl apply -f configmaps/grafana-dashboards.yaml
 kubectl apply -f configmaps/grafana-dashboard-infra.yaml
+kubectl apply -f configmaps/grafana-alerts.yaml
 kubectl apply -f configmaps/fluent-bit-config.yaml
 
 echo ""
@@ -115,13 +116,18 @@ fi
 
 # Resto de servicios ops
 kubectl apply -f services/ops/otel-collector-service.yaml
-kubectl apply -f deployments/ops/otel-collector-deployment.yaml
-
+kubectl apply -f services/ops/jaeger-service.yaml
+kubectl apply -f deployments/ops/jaeger-deployment.yaml
 kubectl apply -f deployments/ops/prometheus-serviceaccount.yaml
 kubectl apply -f deployments/ops/prometheus-clusterrole.yaml
 kubectl apply -f deployments/ops/prometheus-clusterrolebinding.yaml
 kubectl apply -f services/ops/prometheus-service.yaml
 kubectl apply -f deployments/ops/prometheus-deployment.yaml
+kubectl apply -f deployments/ops/otel-collector-serviceaccount.yaml
+kubectl apply -f deployments/ops/otel-collector-clusterrole.yaml
+kubectl apply -f deployments/ops/otel-collector-clusterrolebinding.yaml
+kubectl apply -f deployments/ops/otel-collector-deployment.yaml
+
 kubectl apply -f services/ops/node-exporter-service.yaml
 kubectl apply -f deployments/ops/node-exporter-daemonset.yaml
 

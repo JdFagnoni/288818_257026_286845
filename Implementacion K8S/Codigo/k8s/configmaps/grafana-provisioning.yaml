@@ -17,12 +17,18 @@ data:
         jsonData:
           timeInterval: 5s
           queryTimeout: 60s
+      - name: Jaeger
+        type: jaeger
+        uid: jaeger
+        access: proxy
+        url: http://jaeger:16686
+        editable: false
   dashboards.yml: |
     apiVersion: 1
     providers:
       - name: 'PharmaGo'
         orgId: 1
-        folder: ''
+        folder: PharmaGo
         type: file
         disableDeletion: false
         editable: true

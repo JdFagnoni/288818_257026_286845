@@ -5,6 +5,7 @@ using Instrumentation;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.UseStructuredJsonConsole();
 builder.Logging.SuppressEfAndSqlClientLogs();
 
 builder.Services.AddHttpContextAccessor();

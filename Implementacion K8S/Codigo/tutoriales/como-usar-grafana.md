@@ -1,5 +1,7 @@
 # Configuración de Grafana - PharmaGo
 
+Para el clúster Kubernetes actual, los dashboards, la fuente Jaeger y cinco alertas se provisionan automáticamente. Ver [la guía de telemetría](../k8s/README-telemetry.md). Los pasos manuales de esta página son opcionales.
+
 ## 🎯 Configuración Automática
 
 Grafana se configura automáticamente al levantar Docker Compose. No necesitas hacer nada manualmente.

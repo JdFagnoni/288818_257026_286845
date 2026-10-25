@@ -2,6 +2,8 @@
 
 Esta guía despliega PharmaGo en un cluster multinodo. Para el primer requisito del proyecto, los tres microservicios backend deben quedar en nodos Kubernetes distintos.
 
+La configuración de logs JSON, trazas OTLP, métricas y alertas se describe en [README-telemetry.md](README-telemetry.md).
+
 ## Topología requerida
 
 El cluster tiene 5 nodos. Esta es la asignación de referencia del equipo, la misma en todos los clusters (ver también [deployment-diagram.md](deployment-diagram.md)):

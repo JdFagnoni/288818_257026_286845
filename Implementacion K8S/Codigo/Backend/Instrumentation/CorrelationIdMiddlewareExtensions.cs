@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace Instrumentation;
 
@@ -22,7 +23,8 @@ public static class CorrelationIdMiddlewareExtensions
                 : header.Trim();
             context.Items[HttpContextItemKey] = correlationId;
             context.Response.Headers["X-Correlation-ID"] = correlationId;
-            await next();
+            using (BeginRequestScope(context, correlationId))
+                await next();
         });
     }
 
@@ -39,10 +41,22 @@ public static class CorrelationIdMiddlewareExtensions
                 : header.Trim();
             context.Items[HttpContextItemKey] = correlationId;
 
-            var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
-            var log = loggerFactory.CreateLogger("Request");
-            using (log.BeginScope(new Dictionary<string, object> { ["correlation_id"] = correlationId }))
+            using (BeginRequestScope(context, correlationId))
                 await next();
         });
+    }
+
+    private static IDisposable? BeginRequestScope(HttpContext context, string correlationId)
+    {
+        var fields = new Dictionary<string, object> { ["correlation_id"] = correlationId };
+        if (Activity.Current is { } activity)
+        {
+            fields["trace_id"] = activity.TraceId.ToHexString();
+            fields["span_id"] = activity.SpanId.ToHexString();
+        }
+
+        return context.RequestServices.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("Request")
+            .BeginScope(fields);
     }
 }
