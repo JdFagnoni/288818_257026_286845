@@ -72,3 +72,12 @@ Técnica: rolling update (`maxSurge: 1`, `maxUnavailable: 0`, `minReadySeconds: 
 | [03-grafana-overview-rollout-superior.png](03-despliegues-seguros/03-grafana-overview-rollout-superior.png) | Overview durante los rollouts (22:07 a 22:10): el tráfico sigue sin cortes y la tasa de error se mantiene en 0 %. La latencia de `/api/drug` sube hasta ~29 ms mientras se reemplaza pharmacy, por las primeras consultas en los pods nuevos, sin errores. | 2026-10-21 |
 | [04-grafana-overview-rollout-inferior.png](03-despliegues-seguros/04-grafana-overview-rollout-inferior.png) | Resto del Overview: ni errores 429 ni errores en `/api/drug` durante los rollouts. | 2026-10-21 |
 | [05-grafana-infra-rollout.png](03-despliegues-seguros/05-grafana-infra-rollout.png) | Dashboard *PharmaGo - Infra* durante los rollouts: CPU y memoria de nodo estables, y CPU y memoria por pod sin picos al reemplazar los pods. | 2026-10-21 |
+
+### 05 · Detección de anomalías
+
+Muestra exportada de Prometheus para el nodo `pharmago-m02` (33 instantes, CPU, memoria, disco y red). Sirve para demostrar el pipeline hasta que lleguen los datasets docentes. El notebook y las instrucciones están en [anomaly_detection](../../Implementacion%20K8S/Codigo/anomaly_detection/README.md).
+
+| Archivo | Qué muestra | Fecha |
+|---|---|---|
+| [01-comparacion-prometheus.png](05-deteccion-anomalias/01-comparacion-prometheus.png) | Anomalías sobre CPU marcadas por Isolation Forest y One-Class SVM RBF en dos paneles. | 2026-10-24 |
+| [02-resumen-prometheus.txt](05-deteccion-anomalias/02-resumen-prometheus.txt) | Parámetros, métricas usadas, cantidad de anomalías e intersección de ambos modelos. | 2026-10-24 |
