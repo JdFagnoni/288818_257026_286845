@@ -1,0 +1,47 @@
+$ python cli.py analyze --input examples/prometheus_sample.csv --timestamp-column timestamp --plot-feature cpu_percent --output-dir output/smoke
+
+{
+  "rows": 33,
+  "training_rows": 33,
+  "features": [
+    "cpu_percent",
+    "memory_percent",
+    "disk_available_percent",
+    "network_receive_bytes_per_second",
+    "network_transmit_bytes_per_second"
+  ],
+  "dropped_empty_or_constant_features": [
+    "network_errors_per_second"
+  ],
+  "missing_values_by_feature": {
+    "cpu_percent": 0,
+    "memory_percent": 0,
+    "disk_available_percent": 0,
+    "network_receive_bytes_per_second": 0,
+    "network_transmit_bytes_per_second": 0
+  },
+  "parameters": {
+    "contamination": 0.05,
+    "nu": 0.05,
+    "gamma": "scale",
+    "n_estimators": 200,
+    "random_state": 42,
+    "max_train_rows": 5000
+  },
+  "models": {
+    "isolation_forest": {
+      "anomalies": 2,
+      "anomaly_fraction": 0.06060606060606061
+    },
+    "one_class_svm_rbf": {
+      "anomalies": 5,
+      "anomaly_fraction": 0.15151515151515152
+    }
+  },
+  "comparison": {
+    "both_anomalous": 2,
+    "either_anomalous": 5,
+    "agreement_fraction": 0.9090909090909091,
+    "anomaly_jaccard": 0.4
+  }
+}
