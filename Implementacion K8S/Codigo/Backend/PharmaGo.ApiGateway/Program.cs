@@ -8,8 +8,12 @@ using Instrumentation;
 using InstrumentationInterface;
 using Yarp.ReverseProxy.Forwarder;
 using Yarp.ReverseProxy.Transforms;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.UseStructuredJsonConsole();
 
 builder.Services.AddMemoryCache();
 
@@ -57,8 +61,24 @@ builder.Services.AddOpenTelemetry()
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddMeter("PharmaGo.CustomMetrics")
-            .AddPrometheusExporter();
-    });
+            .AddPrometheusExporter()
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri(Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT")
+                    ?? "http://otlp-collector:4317");
+                options.Protocol = OtlpExportProtocol.Grpc;
+            });
+    })
+    .WithTracing(tracingBuilder => tracingBuilder
+        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("PharmaGo.ApiGateway"))
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddOtlpExporter(options =>
+        {
+            options.Endpoint = new Uri(Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT")
+                ?? "http://otlp-collector:4317");
+            options.Protocol = OtlpExportProtocol.Grpc;
+        }));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

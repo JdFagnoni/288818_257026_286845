@@ -2,7 +2,7 @@
 FROM node:16 AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npm run build --prod
 

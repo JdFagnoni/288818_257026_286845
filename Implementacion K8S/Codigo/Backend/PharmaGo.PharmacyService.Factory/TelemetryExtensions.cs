@@ -1,31 +1,46 @@
 using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
-using OpenTelemetry.Exporter;
-using System.Diagnostics;
+using OpenTelemetry.Trace;
 
-namespace PharmaGo.PharmacyService.Factory
+namespace PharmaGo.PharmacyService.Factory;
+
+public static class OpenTelemetryExtensions
 {
-    public static class OpenTelemetryExtensions
+    public static IServiceCollection AddPharmaGoOpenTelemetryMetrics(
+        this IServiceCollection services, string serviceName = "PharmaGo.PharmacyService")
     {
-        public static IServiceCollection AddPharmaGoOpenTelemetryMetrics(this IServiceCollection services, string serviceName = "PharmaGo.PharmacyService")
-        {
-            services.AddOpenTelemetry()
-                    .WithMetrics(metricsBuilder => { metricsBuilder
-                    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
+        var endpoint = new Uri(Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT")
+            ?? "http://otlp-collector:4317");
+        var resource = ResourceBuilder.CreateDefault().AddService(serviceName);
+
+        services.AddOpenTelemetry()
+            .WithMetrics(metrics =>
+            {
+                metrics.SetResourceBuilder(resource)
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddMeter("PharmaGo.CustomMetrics")
                     .AddPrometheusExporter()
                     .AddOtlpExporter(options =>
-                        {
-                            options.Endpoint = new Uri("http://otlp-collector:4317");
-                            options.Protocol = OtlpExportProtocol.Grpc;
-                        });
+                    {
+                        options.Endpoint = endpoint;
+                        options.Protocol = OtlpExportProtocol.Grpc;
                     });
+            })
+            .WithTracing(traces =>
+            {
+                traces.SetResourceBuilder(resource)
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddOtlpExporter(options =>
+                    {
+                        options.Endpoint = endpoint;
+                        options.Protocol = OtlpExportProtocol.Grpc;
+                    });
+            });
 
-            return services;
-        }
+        return services;
     }
 }
-
