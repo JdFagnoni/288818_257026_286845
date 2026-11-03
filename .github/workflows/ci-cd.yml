@@ -98,6 +98,19 @@ jobs:
       - name: Analyze sample dataset
         run: python cli.py analyze --input examples/prometheus_sample.csv --output-dir output/ci
 
+      - name: Analyze synthetic classroom dataset
+        run: |
+          python examples/generate_checkout_sintetico.py
+          git diff --exit-code -- examples/checkout_sintetico_docente.csv
+          python cli.py analyze \
+            --input examples/checkout_sintetico_docente.csv \
+            --timestamp-column timestamp \
+            --features requests error_rate latency_ms cpu_pct \
+            --label-column is_anomaly --anomaly-label 1 \
+            --contamination 0.10 --nu 0.10 --gamma scale \
+            --n-estimators 300 --random-state 42 \
+            --output-dir output/ci-checkout
+
       - name: Execute notebook
         run: |
           python - <<'PY'
