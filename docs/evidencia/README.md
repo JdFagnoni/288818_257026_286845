@@ -81,3 +81,12 @@ Muestra exportada de Prometheus para el nodo `pharmago-m02` (33 instantes, CPU, 
 |---|---|---|
 | [01-comparacion-prometheus.png](05-deteccion-anomalias/01-comparacion-prometheus.png) | Anomalías sobre CPU marcadas por Isolation Forest y One-Class SVM RBF en dos paneles. | 2026-10-24 |
 | [02-resumen-prometheus.txt](05-deteccion-anomalias/02-resumen-prometheus.txt) | Parámetros, métricas usadas, cantidad de anomalías e intersección de ambos modelos. | 2026-10-24 |
+
+### 07 · Scripts de caos
+
+El ejecutor está documentado en [chaos-engineering/README.md](../../Implementacion%20K8S/Codigo/chaos-engineering/README.md). Las pruebas se ejecutaron sobre el cluster `pharmago` con cinco nodos; los pods de carga se ubicaron junto al gateway y las sondas en el nodo `ops`.
+
+| Archivo | Qué muestra | Fecha |
+|---|---|---|
+| [01-ejecucion-caos.txt](07-scripts-caos/01-ejecucion-caos.txt) | Salida real de `run-chaos.py --scenario all`: requests, CPU, memoria, storage, corte de red y desconexión de pharmacy. Incluye respuestas durante el fallo y tras la restauración de los dos últimos escenarios. | 2026-11-03 |
+| [02-metricas-y-restauracion.txt](07-scripts-caos/02-metricas-y-restauracion.txt) | Consultas PromQL durante pruebas prolongadas de CPU, memoria y storage; máximos observados y estado final del Service, el Deployment y los pods temporales. | 2026-11-03 |

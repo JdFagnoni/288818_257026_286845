@@ -1,0 +1,22 @@
+Pruebas adicionales de métricas, 2026-11-03 (UTC)
+Fuente: Prometheus local, API /api/v1/query_range; step=5s.
+Comando de cada prueba: python3 run-chaos.py --scenario <escenario> --duration <segundos>
+Los escenarios se ejecutaron por separado después de la prueba de los seis.
+
+CPU: pod=pharmago-chaos-cpu-0445cceb; duración=75s
+PromQL: rate(container_cpu_usage_seconds_total{namespace="pharmago",pod="pharmago-chaos-cpu-0445cceb",container="load"}[1m])
+Muestras: 16; pico: 0.997 núcleos a las 2026-11-03T22:24:20Z.
+
+Memoria: pod=pharmago-chaos-memory-3aefc5dd; duración=75s
+PromQL: container_memory_working_set_bytes{namespace="pharmago",pod="pharmago-chaos-memory-3aefc5dd",container="load"}
+Muestras: 38; pico: 96.547 MiB a las 2026-11-03T22:26:15Z.
+
+Storage: pod=pharmago-chaos-storage-7c249ee3; duración=90s
+PromQL: k8s_pod_filesystem_usage_bytes{k8s_namespace_name="pharmago",k8s_pod_name="pharmago-chaos-storage-7c249ee3"}
+Muestras: 10; pico: 128.055 MiB a las 2026-11-03T22:28:25Z.
+
+Estado final del cluster:
+Service pharmacy targetPort: 80
+Deployment pharmacy réplicas deseadas/disponibles: 2/2
+Pods de caos restantes: 0
+Gateway réplicas disponibles: 2

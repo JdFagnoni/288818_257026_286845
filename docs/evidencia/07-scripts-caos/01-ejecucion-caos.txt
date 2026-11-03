@@ -1,0 +1,323 @@
+$ python3 run-chaos.py --scenario all --duration 20 --requests 200
+2026-11-03T22:17:48Z [preflight] Contexto=pharmago, namespace=pharmago.
+2026-11-03T22:17:49Z [preflight] Nodo del gateway=pharmago-m03. Los pods de carga usarán ese nodo; las sondas, ops.
+2026-11-03T22:17:49Z [requests] Inyectando hasta 200 requests durante 20 s.
+2026-11-03T22:17:50Z [requests] Pod pharmago-chaos-requests-5c1f4d87 creado; esperando resultado.
+2026-11-03T22:17:56Z [requests] request=1 status=200
+request=2 status=200
+request=3 status=200
+request=4 status=200
+request=5 status=200
+request=6 status=200
+request=7 status=200
+request=8 status=200
+request=9 status=200
+request=10 status=200
+request=11 status=200
+request=12 status=200
+request=13 status=200
+request=14 status=200
+request=15 status=200
+request=16 status=200
+request=17 status=200
+request=18 status=200
+request=19 status=200
+request=20 status=200
+request=21 status=200
+request=22 status=200
+request=23 status=200
+request=24 status=200
+request=25 status=200
+request=26 status=200
+request=27 status=200
+request=28 status=200
+request=29 status=200
+request=30 status=200
+request=31 status=200
+request=32 status=200
+request=33 status=200
+request=34 status=200
+request=35 status=200
+request=36 status=200
+request=37 status=200
+request=38 status=200
+request=39 status=200
+request=40 status=200
+request=41 status=200
+request=42 status=200
+request=43 status=200
+request=44 status=200
+request=45 status=200
+request=46 status=200
+request=47 status=200
+request=48 status=200
+request=49 status=200
+request=50 status=200
+request=51 status=200
+request=52 status=200
+request=53 status=200
+request=54 status=200
+request=55 status=200
+request=56 status=200
+request=57 status=200
+request=58 status=200
+request=59 status=200
+request=60 status=200
+request=61 status=200
+request=62 status=200
+request=63 status=200
+request=64 status=200
+request=65 status=200
+request=66 status=200
+request=67 status=200
+request=68 status=200
+request=69 status=200
+request=70 status=200
+request=71 status=200
+request=72 status=200
+request=73 status=200
+request=74 status=200
+request=75 status=200
+request=76 status=200
+request=77 status=200
+request=78 status=200
+request=79 status=200
+request=80 status=200
+request=81 status=200
+request=82 status=200
+request=83 status=200
+request=84 status=200
+request=85 status=200
+request=86 status=200
+request=87 status=200
+request=88 status=200
+request=89 status=200
+request=90 status=200
+request=91 status=200
+request=92 status=200
+request=93 status=200
+request=94 status=200
+request=95 status=200
+request=96 status=200
+request=97 status=200
+request=98 status=200
+request=99 status=200
+request=100 status=200
+request=101 status=200
+request=102 status=200
+request=103 status=200
+request=104 status=200
+request=105 status=200
+request=106 status=200
+request=107 status=200
+request=108 status=200
+request=109 status=200
+request=110 status=200
+request=111 status=200
+request=112 status=200
+request=113 status=200
+request=114 status=200
+request=115 status=200
+request=116 status=200
+request=117 status=200
+request=118 status=200
+request=119 status=200
+request=120 status=200
+request=121 status=200
+request=122 status=200
+request=123 status=200
+request=124 status=200
+request=125 status=200
+request=126 status=200
+request=127 status=200
+request=128 status=200
+request=129 status=200
+request=130 status=200
+request=131 status=200
+request=132 status=200
+request=133 status=200
+request=134 status=200
+request=135 status=200
+request=136 status=200
+request=137 status=200
+request=138 status=200
+request=139 status=200
+request=140 status=200
+request=141 status=200
+request=142 status=200
+request=143 status=200
+request=144 status=200
+request=145 status=200
+request=146 status=200
+request=147 status=200
+request=148 status=200
+request=149 status=200
+request=150 status=200
+request=151 status=200
+request=152 status=200
+request=153 status=200
+request=154 status=200
+request=155 status=200
+request=156 status=200
+request=157 status=200
+request=158 status=200
+request=159 status=200
+request=160 status=200
+request=161 status=200
+request=162 status=200
+request=163 status=200
+request=164 status=200
+request=165 status=200
+request=166 status=200
+request=167 status=200
+request=168 status=200
+request=169 status=200
+request=170 status=200
+request=171 status=200
+request=172 status=200
+request=173 status=200
+request=174 status=200
+request=175 status=200
+request=176 status=200
+request=177 status=200
+request=178 status=200
+request=179 status=200
+request=180 status=200
+request=181 status=200
+request=182 status=200
+request=183 status=200
+request=184 status=200
+request=185 status=200
+request=186 status=200
+request=187 status=200
+request=188 status=200
+request=189 status=200
+request=190 status=200
+request=191 status=200
+request=192 status=200
+request=193 status=200
+request=194 status=200
+request=195 status=200
+request=196 status=429
+request=197 status=200
+request=198 status=429
+request=199 status=429
+request=200 status=200
+SUMMARY sent=200 success=197 other=3
+2026-11-03T22:17:56Z [requests] Pod pharmago-chaos-requests-5c1f4d87 eliminado.
+2026-11-03T22:17:56Z [requests] Escenario completado.
+2026-11-03T22:17:56Z [cpu] Inyectando carga durante 20 s en el nodo del gateway.
+2026-11-03T22:17:56Z [cpu] Pod pharmago-chaos-cpu-5a18c296 creado; esperando resultado.
+2026-11-03T22:18:21Z [cpu] CPU load finished
+2026-11-03T22:18:22Z [cpu] Pod pharmago-chaos-cpu-5a18c296 eliminado.
+2026-11-03T22:18:22Z [cpu] Escenario completado.
+2026-11-03T22:18:22Z [memory] Inyectando carga durante 20 s en el nodo del gateway.
+2026-11-03T22:18:22Z [memory] Pod pharmago-chaos-memory-42e60d60 creado; esperando resultado.
+2026-11-03T22:18:49Z [memory] 96+0 records in
+96+0 records out
+100663296 bytes (96.0MB) copied, 0.304783 seconds, 315.0MB/s
+Memory load finished
+2026-11-03T22:18:50Z [memory] Pod pharmago-chaos-memory-42e60d60 eliminado.
+2026-11-03T22:18:50Z [memory] Escenario completado.
+2026-11-03T22:18:50Z [storage] Inyectando carga durante 20 s en el nodo del gateway.
+2026-11-03T22:18:50Z [storage] Pod pharmago-chaos-storage-250b79fb creado; esperando resultado.
+2026-11-03T22:19:17Z [storage] 128+0 records in
+128+0 records out
+134217728 bytes (128.0MB) copied, 3.233255 seconds, 39.6MB/s
+Storage load finished
+2026-11-03T22:19:18Z [storage] Pod pharmago-chaos-storage-250b79fb eliminado.
+2026-11-03T22:19:18Z [storage] Escenario completado.
+2026-11-03T22:19:18Z [network-baseline] Pod pharmago-chaos-network-baseline-a0e87010 creado; esperando resultado.
+2026-11-03T22:19:24Z [network-baseline] request=1 status=200
+request=2 status=200
+request=3 status=200
+request=4 status=200
+SUMMARY sent=4 success=4 other=0
+2026-11-03T22:19:24Z [network-baseline] Pod pharmago-chaos-network-baseline-a0e87010 eliminado.
+2026-11-03T22:19:24Z [network] Cortando temporalmente Service pharmago-pharmacy-service: targetPort 80 → 1.
+2026-11-03T22:19:25Z [network] Pod pharmago-chaos-network-855a8dd0 creado; esperando resultado.
+2026-11-03T22:19:47Z [network] request=1 status=ERR
+request=2 status=ERR
+request=3 status=ERR
+request=4 status=ERR
+request=5 status=ERR
+request=6 status=ERR
+request=7 status=ERR
+request=8 status=ERR
+request=9 status=ERR
+request=10 status=ERR
+request=11 status=ERR
+request=12 status=ERR
+request=13 status=ERR
+request=14 status=ERR
+request=15 status=ERR
+request=16 status=ERR
+request=17 status=ERR
+request=18 status=ERR
+request=19 status=ERR
+request=20 status=ERR
+SUMMARY sent=20 success=0 other=20
+2026-11-03T22:19:48Z [network] Pod pharmago-chaos-network-855a8dd0 eliminado.
+2026-11-03T22:19:48Z [network] Service pharmago-pharmacy-service restaurado a targetPort 80.
+2026-11-03T22:19:48Z [network-recovery] Pod pharmago-chaos-network-recovery-7beccf6b creado; esperando resultado.
+2026-11-03T22:20:04Z [network-recovery] request=1 status=200
+request=2 status=200
+request=3 status=200
+request=4 status=200
+request=5 status=200
+request=6 status=200
+request=7 status=200
+request=8 status=200
+request=9 status=200
+request=10 status=200
+request=11 status=200
+request=12 status=200
+SUMMARY sent=12 success=12 other=0
+2026-11-03T22:20:04Z [network-recovery] Pod pharmago-chaos-network-recovery-7beccf6b eliminado.
+2026-11-03T22:20:04Z [network] Escenario completado.
+2026-11-03T22:20:04Z [component-baseline] Pod pharmago-chaos-component-baseline-42ae5f0b creado; esperando resultado.
+2026-11-03T22:20:13Z [component-baseline] request=1 status=200
+request=2 status=200
+request=3 status=200
+request=4 status=200
+request=5 status=200
+SUMMARY sent=5 success=5 other=0
+2026-11-03T22:20:13Z [component-baseline] Pod pharmago-chaos-component-baseline-42ae5f0b eliminado.
+2026-11-03T22:20:13Z [component] Desconectando pharmago-pharmacy-service: 2 → 0 réplicas.
+2026-11-03T22:20:20Z [component] Pod pharmago-chaos-component-fe959c37 creado; esperando resultado.
+2026-11-03T22:20:44Z [component] request=1 status=502
+request=2 status=502
+request=3 status=503
+request=4 status=503
+request=5 status=503
+request=6 status=503
+request=7 status=503
+request=8 status=503
+request=9 status=503
+request=10 status=503
+request=11 status=503
+request=12 status=503
+request=13 status=503
+request=14 status=503
+request=15 status=503
+request=16 status=503
+request=17 status=503
+SUMMARY sent=17 success=0 other=17
+2026-11-03T22:20:44Z [component] Pod pharmago-chaos-component-fe959c37 eliminado.
+2026-11-03T22:20:44Z [component] Restaurando pharmago-pharmacy-service a 2 réplicas.
+2026-11-03T22:20:56Z [component-recovery] Pod pharmago-chaos-component-recovery-3d7679c3 creado; esperando resultado.
+2026-11-03T22:21:10Z [component-recovery] request=1 status=200
+request=2 status=200
+request=3 status=200
+request=4 status=200
+request=5 status=200
+request=6 status=200
+request=7 status=200
+request=8 status=200
+request=9 status=200
+request=10 status=200
+request=11 status=200
+SUMMARY sent=11 success=11 other=0
+2026-11-03T22:21:10Z [component-recovery] Pod pharmago-chaos-component-recovery-3d7679c3 eliminado.
+2026-11-03T22:21:10Z [component] Escenario completado.
+2026-11-03T22:21:10Z [done] Completados 6 escenarios: requests, cpu, memory, storage, network, component.
