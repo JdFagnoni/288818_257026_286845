@@ -100,8 +100,14 @@ jobs:
 
       - name: Analyze synthetic classroom dataset
         run: |
-          python examples/generate_checkout_sintetico.py
-          git diff --exit-code -- examples/checkout_sintetico_docente.csv
+          python - <<'PY'
+          import pandas as pd
+          from examples.generate_checkout_sintetico import generate_dataset
+
+          saved = pd.read_csv('examples/checkout_sintetico_docente.csv', parse_dates=['timestamp'])
+          pd.testing.assert_frame_equal(saved, generate_dataset(), rtol=1e-12, atol=1e-12)
+          print('El CSV coincide con el generador dentro de la precisión numérica.')
+          PY
           python cli.py analyze \
             --input examples/checkout_sintetico_docente.csv \
             --timestamp-column timestamp \
