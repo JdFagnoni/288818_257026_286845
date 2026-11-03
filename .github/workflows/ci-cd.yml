@@ -144,6 +144,9 @@ jobs:
       - name: Validate manifests
         run: kubeconform -strict -summary "Implementacion K8S/Codigo/k8s"
 
+      - name: Validate chaos scripts
+        run: python3 -m unittest discover -s "Implementacion K8S/Codigo/chaos-engineering/tests" -v
+
   images:
     name: Image ${{ matrix.image }}
     runs-on: ubuntu-latest
