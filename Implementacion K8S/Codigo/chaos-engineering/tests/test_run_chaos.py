@@ -63,9 +63,13 @@ class ChaosTests(unittest.TestCase):
 
     def test_network_port_is_restored_when_probe_fails(self):
         client = FakeClient()
-        with patch.object(chaos, "run_probe", side_effect=[(1, 1, 0), chaos.ChaosError("sonda falló")]):
+        with patch.object(chaos, "run_probe", side_effect=[(1, 1, 0), chaos.ChaosError("sonda falló")]) as probe:
             with self.assertRaisesRegex(chaos.ChaosError, "sonda falló"):
                 chaos.network_scenario(client, 5)
+        self.assertEqual(
+            [call.kwargs["url"] for call in probe.call_args_list],
+            [chaos.PHARMACY_HEALTH_URL, chaos.PHARMACY_HEALTH_URL],
+        )
         patches = [call for call in client.calls if call[0] == "patch"]
         self.assertEqual(len(patches), 2)
         self.assertEqual(patches[0][3][-1]["value"], 1)

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import signal
 import subprocess
 import sys
@@ -18,6 +19,8 @@ GATEWAY = "pharmago-api-gateway"
 PHARMACY = "pharmago-pharmacy-service"
 SCENARIOS = ("requests", "cpu", "memory", "storage", "network", "component")
 IMAGE = "busybox:1.36"
+GATEWAY_DRUG_URL = f"http://{GATEWAY}/api/drug"
+PHARMACY_HEALTH_URL = f"http://{PHARMACY}/health"
 
 
 class ChaosError(RuntimeError):
@@ -153,13 +156,14 @@ def run_pod(client: Kubectl, manifest: dict[str, Any], scenario: str, duration: 
             note(scenario, f"Pod {name} eliminado.")
 
 
-def request_command(duration: int, count: int, *, interval: int = 0) -> str:
+def request_command(duration: int, count: int, *, interval: int = 0,
+                    url: str = GATEWAY_DRUG_URL) -> str:
     # wget de BusyBox devuelve código no cero para respuestas HTTP de error.
     return f"""
 end=$(($(date +%s) + {duration}))
 sent=0; success=0; other=0
 while [ "$(date +%s)" -lt "$end" ] && [ "$sent" -lt {count} ]; do
-  response=$(wget -S -q -T 2 -O /dev/null http://{GATEWAY}/api/drug 2>&1) || true
+  response=$(wget -S -q -T 2 -O /dev/null {shlex.quote(url)} 2>&1) || true
   code=$(printf '%s\\n' "$response" | sed -n 's/.*HTTP[^ ]* \\([0-9][0-9][0-9]\\).*/\\1/p' | tail -1)
   [ -n "$code" ] || code=ERR
   sent=$((sent + 1))
@@ -178,8 +182,9 @@ def new_manifest(scenario: str, command: str, selector: dict[str, str], duration
 
 
 def run_probe(client: Kubectl, scenario: str, duration: int, *, flood: bool = False,
-              request_count: int = 200) -> tuple[int, int, int]:
-    command = request_command(duration, request_count if flood else duration, interval=0 if flood else 1)
+              request_count: int = 200, url: str = GATEWAY_DRUG_URL) -> tuple[int, int, int]:
+    command = request_command(duration, request_count if flood else duration,
+                              interval=0 if flood else 1, url=url)
     manifest = new_manifest(scenario, command, {"node-type": "ops"}, duration)
     logs = run_pod(client, manifest, scenario, duration)
     summary = next((line for line in logs.splitlines() if line.startswith("SUMMARY ")), "")
@@ -208,9 +213,9 @@ def resource_scenario(client: Kubectl, scenario: str, selector: dict[str, str],
 
 
 def network_scenario(client: Kubectl, duration: int) -> None:
-    _, baseline_success, _ = run_probe(client, "network-baseline", 5)
+    _, baseline_success, _ = run_probe(client, "network-baseline", 5, url=PHARMACY_HEALTH_URL)
     if baseline_success == 0:
-        raise ChaosError("La ruta del gateway a pharmacy ya falla antes de la inyección de red.")
+        raise ChaosError("La ruta al Service de pharmacy ya falla antes de la inyección de red.")
     service = client.get("service", PHARMACY)
     ports = service.get("spec", {}).get("ports", [])
     if len(ports) != 1 or ports[0].get("protocol", "TCP") != "TCP":
@@ -225,7 +230,7 @@ def network_scenario(client: Kubectl, duration: int) -> None:
         {"op": "add", "path": path, "value": 1},
     ])
     try:
-        _, _, other = run_probe(client, "network", duration)
+        _, _, other = run_probe(client, "network", duration, url=PHARMACY_HEALTH_URL)
         if other == 0:
             raise ChaosError("La ruta cortada no produjo respuestas fallidas; revisar la prueba.")
     finally:
@@ -234,7 +239,7 @@ def network_scenario(client: Kubectl, duration: int) -> None:
             {"op": "replace", "path": path, "value": original},
         ])
         note("network", f"Service {PHARMACY} restaurado a targetPort {original}.")
-    _, success, _ = run_probe(client, "network-recovery", 12)
+    _, success, _ = run_probe(client, "network-recovery", 12, url=PHARMACY_HEALTH_URL)
     if success == 0:
         raise ChaosError("No hubo respuesta 200 después de restaurar la red.")
 
