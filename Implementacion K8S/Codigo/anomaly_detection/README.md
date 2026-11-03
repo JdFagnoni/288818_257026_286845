@@ -2,7 +2,7 @@
 
 Implementación del ítem 5 del obligatorio: `IsolationForest` y `OneClassSVM(kernel="rbf")` sobre datasets tabulares. El [notebook](deteccion_anomalias.ipynb) muestra ambos modelos, sus parámetros, una comparación de las anomalías detectadas y una gráfica con los puntos marcados. El CLI usa el mismo pipeline para repetir el análisis sin editar el notebook.
 
-Este componente corre fuera de Kubernetes. Lee un CSV o consulta Prometheus mediante su API; no crea pods ni cambia la ubicación de los servicios. Hasta que lleguen los datasets de los docentes, `examples/prometheus_sample.csv` sirve como entrada reproducible y `export-prometheus` permite generar otra muestra del clúster.
+Este componente corre fuera de Kubernetes. Lee un CSV o consulta Prometheus mediante su API; no crea pods ni cambia la ubicación de los servicios. `examples/prometheus_sample.csv` y `examples/checkout_sintetico_docente.csv` sirven como entradas reproducibles; `export-prometheus` permite generar otra muestra del clúster.
 
 ## Preparación
 
@@ -44,6 +44,36 @@ El exportador consulta CPU, memoria y disco del nodo, además de tráfico y erro
 
 ## Usar un dataset docente
 
+### Dataset sintético del notebook de clase
+
+El notebook compartido por el docente **genera** un dataset de 300 ventanas de un servicio de checkout; no trae un CSV externo ni modelos ya entrenados. Las celdas de los detectores están marcadas como `TODO`. Reprodujimos el generador con semilla 42 en [generate_checkout_sintetico.py](examples/generate_checkout_sintetico.py) y versionamos el [CSV resultante](examples/checkout_sintetico_docente.csv). Cada fila contiene `requests`, `error_rate`, `latency_ms` y `cpu_pct`. `kind` e `is_anomaly` son etiquetas para evaluar: no deben entrar en el entrenamiento.
+
+Para regenerar el CSV y ejecutar los dos modelos requeridos con los parámetros indicados por el notebook (`n_estimators=300`, `contamination=0.10`, `nu=0.10`, `gamma=scale`, semilla 42):
+
+```bash
+python examples/generate_checkout_sintetico.py
+python cli.py analyze \
+  --input examples/checkout_sintetico_docente.csv \
+  --timestamp-column timestamp \
+  --features requests error_rate latency_ms cpu_pct \
+  --label-column is_anomaly --anomaly-label 1 \
+  --contamination 0.10 --nu 0.10 --gamma scale \
+  --n-estimators 300 --random-state 42 \
+  --plot-feature error_rate \
+  --output-dir output/checkout_sintetico_docente
+```
+
+Los dos modelos se ajustan con las 300 ventanas escaladas y sin etiquetas. Isolation Forest usa su valor por defecto `max_samples="auto"`, que en este caso toma 256 ventanas por árbol, como pide el notebook. Las columnas de etiquetas se conservan en `results.csv` para comparar las predicciones. Con esta versión del CSV, hay 53 ventanas etiquetadas como anómalas:
+
+| Modelo | Alertas | Precisión | Recall | F1 |
+|---|---:|---:|---:|---:|
+| Isolation Forest | 30 | 0.800 | 0.453 | 0.578 |
+| One-Class SVM (RBF) | 29 | 0.621 | 0.340 | 0.439 |
+
+Por ejemplo, Isolation Forest detecta las 8 ventanas de `incidente_5xx` y las 4 de `timeouts`, pero ninguna de las 18 de `degradacion`; también marca 4 de las 20 ventanas `batch` que el docente considera legítimas. El SVM marca 4 de 8 de `incidente_5xx`, 1 de 18 de `degradacion` y 5 de 20 de `batch`. Son métricas exploratorias **in-sample**: entrenamiento y evaluación usan las mismas ventanas contaminadas, tal como establece el ejercicio. El notebook también pide comparar k-sigma y MAD, pero esos métodos no forman parte del requisito de implementar Isolation Forest y SVM con RBF.
+
+### CSV externos
+
 Colocar el CSV en `data/` (ignorado por Git) y cambiar la ruta en el notebook o ejecutar, por ejemplo:
 
 ```bash
@@ -70,4 +100,4 @@ python -m unittest discover -s tests -v
 python cli.py analyze --input examples/prometheus_sample.csv --output-dir output/smoke
 ```
 
-Los directorios `data/` y `output/` quedan fuera de Git. La muestra de `examples/` y el notebook sí están versionados para que el flujo se pueda reproducir sin acceder al Prometheus local.
+Los directorios `data/` y `output/` quedan fuera de Git. Los ejemplos de `examples/` y el notebook del proyecto sí están versionados para que el flujo se pueda reproducir sin acceder al Prometheus local.
