@@ -17,6 +17,7 @@ namespace PharmaGo.ApiGateway.Resilience
         public int RetryMaxJitterMilliseconds { get; set; } = 100;
         public int CircuitBreakerFailuresBeforeBreaking { get; set; } = 5;
         public int CircuitBreakerBreakSeconds { get; set; } = 5;
+        public int PooledConnectionLifetimeSeconds { get; set; } = 15;
     }
 
     // Agrega circuit breaker, retry y timeout al HttpClient que YARP usa para
@@ -44,6 +45,19 @@ namespace PharmaGo.ApiGateway.Resilience
         {
             _logger = logger;
             _options = options.Value;
+        }
+
+        // YARP reutiliza cada conexión con un servicio sin límite de tiempo, y
+        // kube-proxy solo decide el destino de las conexiones nuevas: una conexión
+        // abierta sigue llegando al mismo pod aunque cambie el Service. Así, un corte
+        // de red entre el Service y los pods no se notaría mientras haya tráfico.
+        // Renovar las conexiones hace que el corte aparezca como falla (y abra el
+        // circuito) en pocos segundos, y que las réplicas nuevas de un servicio
+        // escalado también reciban tráfico.
+        protected override void ConfigureHandler(ForwarderHttpClientContext context, SocketsHttpHandler handler)
+        {
+            base.ConfigureHandler(context, handler);
+            handler.PooledConnectionLifetime = TimeSpan.FromSeconds(_options.PooledConnectionLifetimeSeconds);
         }
 
         protected override HttpMessageHandler WrapHandler(ForwarderHttpClientContext context, HttpMessageHandler handler)
