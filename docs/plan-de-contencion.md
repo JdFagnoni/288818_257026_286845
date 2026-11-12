@@ -244,7 +244,7 @@ Hay dos formas de inyectar caos:
 |---|---|---|
 | Cortar la fuente (variante A u otro pod) | `kubectl delete pod <pod-origen> -n pharmago` | 🟢 |
 | Escalar el gateway | `kubectl scale deployment/pharmago-api-gateway -n pharmago --replicas=3` | 🟠 Las réplicas tienen afinidad con `pharmago-m03`: si no hay memoria, el pod queda `Pending`. Además sube el límite efectivo por IP (~300/min). Volver a 2 al cerrar. |
-| Ajustar los límites con un cambio controlado de configuración | `kubectl set env deployment/pharmago-api-gateway -n pharmago IpRateLimiting__GeneralRules__1__Limit=<n>` `[[VERIFICAR]]` (sin probar; pisa `appsettings.json` por variable de entorno) | 🟠 Provoca un rolling update. Revertir con `kubectl set env deployment/pharmago-api-gateway -n pharmago IpRateLimiting__GeneralRules__1__Limit-`. |
+| Ajustar los límites con un cambio controlado de configuración | `kubectl set env deployment/pharmago-api-gateway -n pharmago IpRateLimiting__GeneralRules__1__Limit=50` `[[VERIFICAR]]` (sin probar). En modo `IP`, el límite que se aplica está en `IpRateLimiting.GeneralRules`, no en `RateLimiting.MaxRequestsPerMinute`. El índice `1` es la regla `*` por minuto (el `0` es la de login), y los `__` son la sintaxis de ASP.NET Core para pisar `appsettings.json` desde una variable de entorno. | 🟠 Provoca un rolling update. Cada réplica lleva su propio contador, así que el límite conjunto queda en ~2 × `<n>`. Revertir con `kubectl set env deployment/pharmago-api-gateway -n pharmago IpRateLimiting__GeneralRules__1__Limit-`. |
 
 **Validación:**
 - Q2 vuelve a la línea base (~0.08 req/s por endpoint de negocio).
@@ -278,7 +278,7 @@ Hay dos formas de inyectar caos:
    - K3 → `pharmago-chaos-cpu-*` y su nodo,
    - Q6 (ventana de 1 m, más rápida que el panel),
    - Q9 para el nodo,
-   - K7 `kubectl top pods -n pharmago` `[[VERIFICAR]]` (requiere metrics-server, que no está en el repo).
+   - K7 `kubectl top pods -n pharmago`, solo si metrics-server funciona (chequeo en 12.3). Si no, usar Q6.
 2. Determinar el origen con K1, K4 y los logs del pod (K5). En la variante B no hay pod de caos: el consumo lo tiene un pod de la app.
 3. Verificar los límites configurados: 0.5 CPU en los pods de la app y 1 CPU en el pod de carga.
 4. Descartar impacto: con Q1 = 0 y Q5 < 1000 ms, solo están afectados los recursos (SEV3).
@@ -715,6 +715,8 @@ Son 15 req/min, por debajo del rate limiting. Replica el tráfico de la [línea 
 | Ruta de punta a punta | K8 con `/api/drug` y `/test-health` | `HTTP/1.1 200 OK` |
 | Errores | Q1 | 0 |
 | Alertas | Grafana → Alert rules | Las 7 en **Normal** |
+| metrics-server (para K7) `[[VERIFICAR]]` | `kubectl get deployment metrics-server -n kube-system`, `kubectl get apiservice v1beta1.metrics.k8s.io`, `kubectl top nodes` | Deployment disponible, APIService `True`, `top` con valores. Si falla, no usar K7: usar Q6 y Q7. Se puede activar con `minikube addons enable metrics-server`, mejor antes de la defensa. |
+| Mapeo de `Message` en Kibana `[[VERIFICAR]]` | Kibana → Dev Tools: `GET pharmago-logs-*/_field_caps?fields=Message,Message.keyword` | `Message` = `text` y `Message.keyword` = `keyword` (mapeo dinámico por defecto: el repo no define uno explícito) |
 | Tráfico de fondo corriendo | `kubectl logs -n pharmago war-room-traffic --tail=6` | Líneas `ok` para `/api/drug`, `/api/pharmacy` y `/test-health` |
 | Logs | Kibana | Hay eventos del gateway de los últimos 2 min |
 
@@ -753,7 +755,7 @@ En el archivo crudo, los `|` de las expresiones regulares están escapados como 
 | Errores de pharmacy | `kubernetes.labels.app : "pharmago-pharmacy-service" and LogLevel : "Error"` |
 | Errores de users | `kubernetes.labels.app : "pharmago-users-service" and LogLevel : "Error"` |
 
-`[[VERIFICAR]]` que `Message` esté indexado como texto, para que funcione la búsqueda por frase. Si es `keyword`, buscar el texto libre sin campo, por ejemplo `"Circuit breaker ABIERTO"`.
+Con el mapeo dinámico de Elasticsearch, `Message` debería ser `text` (sirve la búsqueda por frase) y `Message.keyword` debería ser `keyword` (solo coincidencia exacta). `[[VERIFICAR]]` con el chequeo de `_field_caps` de la sección 12.3. Si `Message` resultara ser `keyword`, buscar el texto libre sin campo, por ejemplo `"Circuit breaker ABIERTO"`.
 
 ### kubectl
 
@@ -765,7 +767,7 @@ En el archivo crudo, los `|` de las expresiones regulares están escapados como 
 | K4 | Últimos eventos | `kubectl get events -n pharmago --sort-by=.lastTimestamp \| tail -20` |
 | K5 | Logs del gateway | `kubectl logs -n pharmago -l app=pharmago-api-gateway --tail=50 --prefix` |
 | K6 | Diferencias con el repo | `kubectl diff -f services/backend/ -f deployments/backend/` |
-| K7 | Consumo en vivo | `kubectl top pods -n pharmago` `[[VERIFICAR]]` (requiere metrics-server) |
+| K7 | Consumo en vivo | `kubectl top pods -n pharmago` (requiere metrics-server; ver 12.3) |
 | K8 | Prueba desde dentro del cluster | `kubectl run war-room-check -n pharmago --rm -i --restart=Never --image=busybox:1.36 --image-pull-policy=IfNotPresent -- wget -S -q -T 3 -O /dev/null http://pharmago-api-gateway/api/drug` (cambiar la URL según el caso) |
 
 Restauración completa si `run-chaos.py` se interrumpe (tomada de [chaos-engineering/README.md](../Implementacion%20K8S/Codigo/chaos-engineering/README.md#restauración)):
