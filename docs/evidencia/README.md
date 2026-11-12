@@ -13,6 +13,7 @@ Capturas y salidas de terminal que respaldan cada ítem de la rúbrica. Cada car
 | `06-plan-contencion/` | Ítem 6. Plan de contención de incidentes | [#8](https://github.com/JdFagnoni/288818_257026_286845/issues/8) |
 | `07-scripts-caos/` | Ítem 7. Scripts de caos | [#9](https://github.com/JdFagnoni/288818_257026_286845/issues/9) |
 | `08-defensa/` | Ítem 8. Defensa (war-room) | [#10](https://github.com/JdFagnoni/288818_257026_286845/issues/10) |
+| `09-herramientas/` | Tecnología y herramientas de la letra: pipeline CI/CD, tablero y BDD | [#15](https://github.com/JdFagnoni/288818_257026_286845/issues/15), [#16](https://github.com/JdFagnoni/288818_257026_286845/issues/16), [#17](https://github.com/JdFagnoni/288818_257026_286845/issues/17) |
 
 ## Convenciones
 
@@ -90,3 +91,11 @@ El ejecutor está documentado en [chaos-engineering/README.md](../../Implementac
 |---|---|---|
 | [01-ejecucion-caos.txt](07-scripts-caos/01-ejecucion-caos.txt) | Salida real de `run-chaos.py --scenario all`: requests, CPU, memoria, storage, corte de red y desconexión de pharmacy. Incluye respuestas durante el fallo y tras la restauración de los dos últimos escenarios. | 2026-11-03 |
 | [02-metricas-y-restauracion.txt](07-scripts-caos/02-metricas-y-restauracion.txt) | Consultas PromQL durante pruebas prolongadas de CPU, memoria y storage; máximos observados y estado final del Service, el Deployment y los pods temporales. | 2026-11-03 |
+
+### 09 · Herramientas
+
+Pipeline: [.github/workflows/ci-cd.yml](../../.github/workflows/ci-cd.yml).
+
+| Archivo | Qué muestra | Fecha |
+|---|---|---|
+| [01-pipeline-ci-cd-main.png](09-herramientas/01-pipeline-ci-cd-main.png) | Corrida del pipeline CI/CD sobre `main` al mergear el PR #22: los 11 checks en verde (backend con los 291 tests, frontend, manifiestos de Kubernetes, build de las 4 imágenes y su publicación en GitHub Container Registry). A la derecha se ven los 4 paquetes publicados. | 2026-10-22 |
