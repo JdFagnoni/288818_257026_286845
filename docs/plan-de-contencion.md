@@ -27,14 +27,19 @@ También es la guía para responder durante las pruebas de ingeniería del caos 
 
 | Escenario | Alerta que salta | Mecanismo automático | Mitigación manual | SEV típica |
 |---|---|---|---|---|
-| `requests` | `[[ALERTA PENDIENTE: pico de requests]]` | Rate limiting del gateway → `429` | Borrar el pod que inunda; escalar el gateway si hay 5xx | SEV3 |
+| `requests` | `Pico de requests en el gateway` (~21 s) | Rate limiting del gateway → `429` | Borrar el pod que inunda; escalar el gateway si hay 5xx | SEV3 |
 | `cpu` | `CPU de pod alta` / `CPU de nodo alta` (solo si la carga dura más de ~4 min) | Límite de CPU del pod; liveness probe | Borrar el pod de carga o el pod afectado | SEV3 |
 | `memory` | `Memoria de nodo alta` (solo con más de 90 % de uso) | Límite de memoria → OOMKilled y reinicio | Borrar el pod de carga o el pod afectado | SEV3 |
 | `storage` | `Espacio de disco bajo` (solo con menos de 15 % libre) | `sizeLimit` / límite de `ephemeral-storage` → desalojo | Borrar el pod de carga o el archivo | SEV3 |
-| `network` | `[[ALERTA PENDIENTE: tasa de 5xx]]` (`Errores de red de nodo` **no** salta) | Reintentos y circuit breaker en el gateway | Restaurar `targetPort` 80 del Service | SEV1–SEV2 |
-| `component` | `[[ALERTA PENDIENTE: tasa de 5xx]]` | Circuit breaker → `503` inmediato; 2 réplicas y probes si muere un pod | `kubectl scale ... --replicas=2` | SEV1 (un solo pod caído: SEV4) |
+| `network` | `Errores 5xx en el gateway` (~70 s, con tráfico hacia pharmacy; `Errores de red de nodo` **no** salta) | Renovación de conexiones cada 15 s, reintentos y circuit breaker en el gateway | Restaurar `targetPort` 80 del Service | SEV1–SEV2 |
+| `component` | `Errores 5xx en el gateway` (~70 s) | Circuit breaker → `503` inmediato; 2 réplicas y probes si muere un pod | `kubectl scale ... --replicas=2` | SEV1 (un solo pod caído: SEV4) |
 
-> **Ojo:** las 5 alertas actuales usan `for: 2m`, y las de CPU además `rate(...[5m])`. Con los valores por defecto del script (`--duration 20`, `96` MiB, `128` MiB) **ninguna llega a dispararse**. En `cpu`, `memory` y `storage`, la detección real se hace con los paneles de *PharmaGo - Infra* y con K3.
+> **Ojo:** hay 7 alertas en dos grupos.
+>
+> - Las 2 del grupo **Servicio PharmaGo** (5xx y pico de requests) se evalúan cada 10 s y saltan dentro de la duración de un escenario: el pico a los ~21 s y los 5xx a los ~70 s.
+> - Las 5 del grupo **Infraestructura PharmaGo** usan `for: 2m`, y las de CPU además `rate(...[5m])`. Con los valores por defecto del script (`--duration 20`, `96` MiB, `128` MiB) **no llegan a dispararse**. En `cpu`, `memory` y `storage`, la detección real se hace con los paneles de *PharmaGo - Infra* y con K3.
+>
+> Las alertas de servicio necesitan **tráfico de fondo** (sección 12.2): sin requests a pharmacy por el gateway no hay 5xx que contar, y el pico no se detecta si el gateway no había atendido antes `/api/drug`.
 
 ---
 
@@ -134,7 +139,10 @@ El IC **sube la severidad** (y lo comunica) cuando:
 
 ### Alertas actuales
 
-Provisionadas en `k8s/configmaps/grafana-alerts.yaml`, en la carpeta **PharmaGo**. Se evalúan cada 30 s y pasan a **Firing** cuando la condición se mantiene durante `for: 2m`.
+Provisionadas en `k8s/configmaps/grafana-alerts.yaml`, en la carpeta **PharmaGo**. Son 7 reglas en dos grupos:
+
+- **Infraestructura PharmaGo:** se evalúan cada 30 s y pasan a **Firing** cuando la condición se mantiene durante `for: 2m`.
+- **Servicio PharmaGo:** se evalúan cada 10 s y miden lo que recibe el usuario a través del gateway (`job="PharmaGo.ApiGateway"`, sin contar `/health`). Los microservicios exportan métricas cada 15 s (`OTEL_METRIC_EXPORT_INTERVAL`).
 
 | Alerta | Condición exacta | Detecta en el caos… |
 |---|---|---|
@@ -143,8 +151,8 @@ Provisionadas en `k8s/configmaps/grafana-alerts.yaml`, en la carpeta **PharmaGo*
 | `Espacio de disco bajo` | Disponible en `/` o `/data` < 15 % | Solo si el disco ya estaba casi lleno |
 | `Errores de red de nodo` | Errores de recepción o transmisión de la placa de red > 0 | **No** detecta el escenario `network`: ahí no hay errores de placa, sino un Service apuntando a un puerto equivocado |
 | `CPU de pod alta` | Un pod usa > 0.4 núcleos (`rate[5m]`) | Recién ~4 min después de empezar una carga de 1 núcleo |
-| `[[ALERTA PENDIENTE: tasa de 5xx]]` | — | `network`, `component` |
-| `[[ALERTA PENDIENTE: pico de requests]]` | — | `requests` |
+| `Errores 5xx en el gateway` (`critical`) | Más del 5 % de las respuestas del último minuto son 5xx, con al menos 3 errores, durante `for: 30s` | `component` y `network`: salta ~70 s después de la caída y se resuelve ~1 min después de restaurar. En `network` necesita tráfico hacia pharmacy por el gateway. |
+| `Pico de requests en el gateway` (`warning`) | Más de 2 req/s promedio en el último minuto, `for: 0s`. Incluye los `429` | `requests`: salta ~21 s después de una ráfaga de 200. No la detecta si el pod del gateway no había atendido antes ese endpoint. |
 
 Por eso la detección **no depende solo de las alertas**. El RO mira los paneles y el RT corre K2 y K3 apenas el IC anuncia que empezó el caos.
 
@@ -207,7 +215,7 @@ Hay dos formas de inyectar caos:
 
 **Síntoma**
 
-- Alerta: `[[ALERTA PENDIENTE: pico de requests]]`.
+- Alerta: `Pico de requests en el gateway` (más de 2 req/s en el último minuto). Salta ~21 s después de la ráfaga y cuenta también los `429`. Requisito: el gateway tiene que haber atendido antes `/api/drug` (el tráfico de fondo lo cubre). Si no, la serie aparece con todo el conteo de golpe y Prometheus no puede calcular la tasa.
 - Grafana, *PharmaGo - Overview*:
   - suben *Peticiones por Segundo por Endpoint* y *Throughput Total*,
   - aparecen `429` en *Rate Limit Errors (429) por Endpoint* y en *Tasa de Error - /api/drug (429 y Total)*,
@@ -409,13 +417,13 @@ Hay dos formas de inyectar caos:
 
 **Síntoma**
 
-- Alerta: `[[ALERTA PENDIENTE: tasa de 5xx]]`. `Errores de red de nodo` **no** salta: no hay errores en la placa de red, el puerto está mal.
+- Alerta: `Errores 5xx en el gateway`, ~70 s después del corte, **solo si hay tráfico hacia pharmacy por el gateway**: la sonda del script llama a pharmacy directamente. `Errores de red de nodo` **no** salta: no hay errores en la placa de red, el puerto está mal.
 - Si el gateway abre conexiones nuevas, en Overview suben:
   - *Tasa de Error por Endpoint (%)* en las rutas de pharmacy,
   - la serie `server_error` de *Tasa de Error por Tipo de Error*.
 - Kibana: `kubernetes.labels.app : "pharmago-api-gateway" and Message : "Connection refused"`, y después `Circuit breaker ABIERTO para pharmacy-cluster`.
 - Jaeger: trazas del gateway hacia pharmacy con error o incompletas.
-- **Puede no haber síntoma en Grafana:** las conexiones HTTP persistentes del gateway pueden seguir respondiendo durante el corte. Confirmar con K8 contra el Service. `[[VERIFICAR]]` si en un corte de 20 s el gateway muestra errores.
+- El gateway renueva sus conexiones con cada servicio cada 15 s (`PooledConnectionLifetimeSeconds`). Así el corte aparece como falla en pocos segundos: en la prueba, el primer error llegó a los 8 s y enseguida se abrió el circuito. Sin tráfico por el gateway no hay síntoma en Grafana: confirmar con K8 contra el Service.
 
 **Diagnóstico**
 
@@ -463,7 +471,7 @@ Otras variantes posibles: borrar pods, matar el proceso, o bajar `pharmago-users
 
 **Síntoma**
 
-- Alerta: `[[ALERTA PENDIENTE: tasa de 5xx]]`.
+- Alerta: `Errores 5xx en el gateway` (`critical`). Salta ~70 s después de apagar pharmacy y se resuelve ~1 min después de restaurarlo.
 - Respuestas `502`, `503` o `504`.
 - Grafana, *PharmaGo - Overview*:
   - *Tasa de Error por Endpoint (%)* sube en `/api/drug`, `/api/pharmacy` y `/api/purchases`,
@@ -530,7 +538,7 @@ Un incidente se da por **resuelto** solo cuando se cumple **todo** esto:
 - [ ] No quedan errores del incidente: Kibana muestra `Circuit breaker CERRADO` si se había abierto, y no hay reintentos nuevos.
 - [ ] Las medidas temporales están revertidas: réplicas del gateway de vuelta en 2, variables de entorno quitadas, pods auxiliares y de caos borrados (K3 vacío).
 
-**Que la alerta vuelva a Normal no alcanza por sí solo para declarar la recuperación.** Las alertas tienen `for: 2m` y ventanas de 5 min, así que se atrasan respecto del estado real.
+**Que la alerta vuelva a Normal no alcanza por sí solo para declarar la recuperación.** Las alertas se atrasan respecto del estado real: la de 5xx se resuelve ~1 min después de restaurar, y las de infraestructura usan `for: 2m` y ventanas de 5 min.
 
 ### Indicadores
 
@@ -671,7 +679,7 @@ Se asignan al empezar cada incidente ([sección 2](#2-roles-y-responsabilidades)
 - [ ] Terminal 2 (RT): `kubectl get pods -n pharmago -o wide -w`.
 - [ ] Terminal 3 (RT): libre para diagnóstico y mitigación.
 - [ ] Grafana http://127.0.0.1:3000 (admin/admin): *PharmaGo - Overview* y *PharmaGo - Infra*, rango `Last 15 minutes`, refresh `5s`.
-- [ ] Grafana → Alerting → Alert rules → carpeta **PharmaGo** (5 reglas, más las 2 pendientes cuando estén).
+- [ ] Grafana → Alerting → Alert rules → carpeta **PharmaGo** (7 reglas: 5 de infraestructura y 2 de servicio).
 - [ ] Prometheus http://127.0.0.1:9090 → Graph, con Q1, Q3 y Q6 cargadas en pestañas.
 - [ ] Kibana http://127.0.0.1:5601 → Discover: data view `pharmago-logs-*`, filtro `kubernetes.labels.app : "pharmago-api-gateway"`, últimos 15 min, auto-refresh.
 - [ ] Jaeger http://127.0.0.1:16686: servicio `PharmaGo.ApiGateway`.
@@ -706,8 +714,8 @@ Son 15 req/min, por debajo del rate limiting. Replica el tráfico de la [línea 
 | Sin cambios respecto del repo | K6 | Sin diferencias (o solo anotaciones de `rollout restart`) |
 | Ruta de punta a punta | K8 con `/api/drug` y `/test-health` | `HTTP/1.1 200 OK` |
 | Errores | Q1 | 0 |
-| Alertas | Grafana → Alert rules | Las 5 en **Normal** |
-| Etiqueta `service_name` | `count by (service_name) (pharmago_http_requests_total)` | `PharmaGo.ApiGateway`, `PharmaGo.UsersService` y `PharmaGo.PharmacyService`. `[[VERIFICAR]]`: si la etiqueta no existe, usar `job` en Q1–Q5. |
+| Alertas | Grafana → Alert rules | Las 7 en **Normal** |
+| Tráfico de fondo corriendo | `kubectl logs -n pharmago war-room-traffic --tail=6` | Líneas `ok` para `/api/drug`, `/api/pharmacy` y `/test-health` |
 | Logs | Kibana | Hay eventos del gateway de los últimos 2 min |
 
 ---
@@ -720,11 +728,11 @@ Las consultas usan `[1m]` para reaccionar rápido. Los paneles usan `[5m]` y **s
 
 | ID | Qué mide | Consulta |
 |---|---|---|
-| Q1 | Tasa de 5xx del gateway (%), sin contar las probes | `100 * sum(rate(pharmago_http_requests_total{service_name="PharmaGo.ApiGateway",status_code=~"5..",endpoint!~"/health\|/metrics"}[1m])) / sum(rate(pharmago_http_requests_total{service_name="PharmaGo.ApiGateway",endpoint!~"/health\|/metrics"}[1m]))` |
-| Q2 | Req/s por endpoint en el gateway | `sum by (endpoint) (rate(pharmago_http_requests_total{service_name="PharmaGo.ApiGateway"}[1m]))` |
-| Q3 | Códigos HTTP por servicio | `sum by (service_name, status_code) (rate(pharmago_http_requests_total[1m]))` |
+| Q1 | Tasa de 5xx del gateway (%), sin contar las probes. Es la misma base que la alerta `Errores 5xx en el gateway`, sin el mínimo de 3 errores. | `100 * sum(rate(pharmago_http_requests_total{job="PharmaGo.ApiGateway",endpoint!="/health",status_code=~"5.."}[1m])) / sum(rate(pharmago_http_requests_total{job="PharmaGo.ApiGateway",endpoint!="/health"}[1m]))` |
+| Q2 | Req/s por endpoint en el gateway. La alerta de pico usa la suma total (`> 2`). | `sum by (endpoint) (rate(pharmago_http_requests_total{job="PharmaGo.ApiGateway"}[1m]))` |
+| Q3 | Códigos HTTP por servicio | `sum by (job, status_code) (rate(pharmago_http_requests_total[1m]))` |
 | Q4 | `429` por endpoint | `sum by (endpoint) (rate(pharmago_http_requests_total{status_code="429"}[1m]))` |
-| Q5 | Latencia promedio en el gateway (ms) | `sum by (endpoint) (rate(pharmago_http_request_duration_milliseconds_sum{service_name="PharmaGo.ApiGateway"}[1m])) / sum by (endpoint) (rate(pharmago_http_request_duration_milliseconds_count{service_name="PharmaGo.ApiGateway"}[1m]))` |
+| Q5 | Latencia promedio en el gateway (ms) | `sum by (endpoint) (rate(pharmago_http_request_duration_milliseconds_sum{job="PharmaGo.ApiGateway"}[1m])) / sum by (endpoint) (rate(pharmago_http_request_duration_milliseconds_count{job="PharmaGo.ApiGateway"}[1m]))` |
 | Q6 | CPU por pod (núcleos) | `sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="pharmago",container!="",container!="POD"}[1m]))` |
 | Q7 | Memoria por pod (MiB) | `sum by (pod) (container_memory_working_set_bytes{namespace="pharmago",container!="",container!="POD"}) / 1048576` |
 | Q8 | Storage efímero por pod (MiB) | `k8s_pod_filesystem_usage_bytes{k8s_namespace_name="pharmago"} / 1048576` |
