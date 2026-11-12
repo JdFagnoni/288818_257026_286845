@@ -244,7 +244,7 @@ data:
                       "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"pharmago\",container!=\"\",container!=\"POD\"}[5m]))",
+                    "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"pharmago\",id=~\".*pod[^/]*\"}[5m]))",
                     "instant": true,
                     "range": false,
                     "refId": "A"
