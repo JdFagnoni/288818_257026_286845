@@ -278,7 +278,7 @@ Hay dos formas de inyectar caos:
    - K3 → `pharmago-chaos-cpu-*` y su nodo,
    - Q6 (ventana de 1 m, más rápida que el panel),
    - Q9 para el nodo,
-   - K7 `kubectl top pods -n pharmago`, solo si metrics-server funciona (chequeo en 12.3). Si no, usar Q6.
+   - K7 `kubectl top pods -n pharmago`. Verificado el 2026-11-12: coincide con Q6.
 2. Determinar el origen con K1, K4 y los logs del pod (K5). En la variante B no hay pod de caos: el consumo lo tiene un pod de la app.
 3. Verificar los límites configurados: 0.5 CPU en los pods de la app y 1 CPU en el pod de carga.
 4. Descartar impacto: con Q1 = 0 y Q5 < 1000 ms, solo están afectados los recursos (SEV3).
@@ -678,7 +678,7 @@ Se asignan al empezar cada incidente ([sección 2](#2-roles-y-responsabilidades)
 - [ ] Terminal 1 (Git Bash, en `Implementacion K8S/Codigo/k8s`): `./port-forward.sh`.
 - [ ] Terminal 2 (RT): `kubectl get pods -n pharmago -o wide -w`.
 - [ ] Terminal 3 (RT): libre para diagnóstico y mitigación.
-- [ ] Grafana http://127.0.0.1:3000 (admin/admin): *PharmaGo - Overview* y *PharmaGo - Infra*, rango `Last 15 minutes`, refresh `5s`.
+- [ ] Grafana http://127.0.0.1:3000 (usuario `admin`; la contraseña es la que configuró el equipo, no `admin`): *PharmaGo - Overview* y *PharmaGo - Infra*, rango `Last 15 minutes`, refresh `5s`.
 - [ ] Grafana → Alerting → Alert rules → carpeta **PharmaGo** (7 reglas: 5 de infraestructura y 2 de servicio).
 - [ ] Prometheus http://127.0.0.1:9090 → Graph, con Q1, Q3 y Q6 cargadas en pestañas.
 - [ ] Kibana http://127.0.0.1:5601 → Discover: data view `pharmago-logs-*`, filtro `kubernetes.labels.app : "pharmago-api-gateway"`, últimos 15 min, auto-refresh.
@@ -715,7 +715,7 @@ Son 15 req/min, por debajo del rate limiting. Replica el tráfico de la [línea 
 | Ruta de punta a punta | K8 con `/api/drug` y `/test-health` | `HTTP/1.1 200 OK` |
 | Errores | Q1 | 0 |
 | Alertas | Grafana → Alert rules | Las 7 en **Normal** |
-| metrics-server (para K7) `[[VERIFICAR]]` | `kubectl get deployment metrics-server -n kube-system`, `kubectl get apiservice v1beta1.metrics.k8s.io`, `kubectl top nodes` | Deployment disponible, APIService `True`, `top` con valores. Si falla, no usar K7: usar Q6 y Q7. Se puede activar con `minikube addons enable metrics-server`, mejor antes de la defensa. |
+| metrics-server (para K7) | `kubectl top nodes` | Valores para los 5 nodos (funcionaba el 2026-11-12). Si falla, no usar K7: usar Q6 y Q7. |
 | Mapeo de `Message` en Kibana `[[VERIFICAR]]` | Kibana → Dev Tools: `GET pharmago-logs-*/_field_caps?fields=Message,Message.keyword` | `Message` = `text` y `Message.keyword` = `keyword` (mapeo dinámico por defecto: el repo no define uno explícito) |
 | Tráfico de fondo corriendo | `kubectl logs -n pharmago war-room-traffic --tail=6` | Líneas `ok` para `/api/drug`, `/api/pharmacy` y `/test-health` |
 | Logs | Kibana | Hay eventos del gateway de los últimos 2 min |
@@ -735,12 +735,14 @@ Las consultas usan `[1m]` para reaccionar rápido. Los paneles usan `[5m]` y **s
 | Q3 | Códigos HTTP por servicio | `sum by (job, status_code) (rate(pharmago_http_requests_total[1m]))` |
 | Q4 | `429` por endpoint | `sum by (endpoint) (rate(pharmago_http_requests_total{status_code="429"}[1m]))` |
 | Q5 | Latencia promedio en el gateway (ms) | `sum by (endpoint) (rate(pharmago_http_request_duration_milliseconds_sum{job="PharmaGo.ApiGateway"}[1m])) / sum by (endpoint) (rate(pharmago_http_request_duration_milliseconds_count{job="PharmaGo.ApiGateway"}[1m]))` |
-| Q6 | CPU por pod (núcleos) | `sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="pharmago",container!="",container!="POD"}[1m]))` |
-| Q7 | Memoria por pod (MiB) | `sum by (pod) (container_memory_working_set_bytes{namespace="pharmago",container!="",container!="POD"}) / 1048576` |
+| Q6 | CPU por pod (núcleos). Mismo filtro que la alerta `CPU de pod alta`. | `sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="pharmago",id=~".*pod[^/]*"}[1m]))` |
+| Q7 | Memoria por pod (MiB) | `sum by (pod) (container_memory_working_set_bytes{namespace="pharmago",id=~".*pod[^/]*"}) / 1048576` |
 | Q8 | Storage efímero por pod (MiB) | `k8s_pod_filesystem_usage_bytes{k8s_namespace_name="pharmago"} / 1048576` |
 | Q9 | CPU de nodo (%), igual que la alerta | `100 * (1 - avg by (node) (rate(node_cpu_seconds_total{mode="idle"}[5m])))` |
 | Q10 | Memoria de nodo (%), igual que la alerta | `100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)` |
 | Q11 | Disco disponible (%), igual que la alerta | `min by (node) (100 * node_filesystem_avail_bytes{mountpoint=~"/\|/data",fstype!~"tmpfs\|overlay\|squashfs"} / node_filesystem_size_bytes{mountpoint=~"/\|/data",fstype!~"tmpfs\|overlay\|squashfs"})` |
+
+En Minikube, las series de cAdvisor no tienen la etiqueta `container`. Por eso Q6 y Q7 filtran por el cgroup del pod (`id` que termina en el segmento del pod): así no se suman dos veces el pod y sus contenedores. Es el mismo arreglo que el PR #29 aplicó a la alerta, que antes quedaba en `nodata`. El panel *CPU por pod (pharmago)* no aplica ese filtro y puede mostrar valores más altos: para cifras exactas, usar Q6.
 
 En el archivo crudo, los `|` de las expresiones regulares están escapados como `\|` para no romper la tabla; en GitHub se ven bien. Si se copia desde el `.md`, sacar la barra invertida.
 
@@ -767,7 +769,7 @@ Con el mapeo dinámico de Elasticsearch, `Message` debería ser `text` (sirve la
 | K4 | Últimos eventos | `kubectl get events -n pharmago --sort-by=.lastTimestamp \| tail -20` |
 | K5 | Logs del gateway | `kubectl logs -n pharmago -l app=pharmago-api-gateway --tail=50 --prefix` |
 | K6 | Diferencias con el repo | `kubectl diff -f services/backend/ -f deployments/backend/` |
-| K7 | Consumo en vivo | `kubectl top pods -n pharmago` (requiere metrics-server; ver 12.3) |
+| K7 | Consumo en vivo | `kubectl top pods -n pharmago` |
 | K8 | Prueba desde dentro del cluster | `kubectl run war-room-check -n pharmago --rm -i --restart=Never --image=busybox:1.36 --image-pull-policy=IfNotPresent -- wget -S -q -T 3 -O /dev/null http://pharmago-api-gateway/api/drug` (cambiar la URL según el caso) |
 
 Restauración completa si `run-chaos.py` se interrumpe (tomada de [chaos-engineering/README.md](../Implementacion%20K8S/Codigo/chaos-engineering/README.md#restauración)):
