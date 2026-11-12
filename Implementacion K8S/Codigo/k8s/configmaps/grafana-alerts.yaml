@@ -280,6 +280,120 @@ data:
               }
             }
           ]
+        },
+        {
+          "orgId": 1,
+          "name": "Servicio PharmaGo",
+          "folder": "PharmaGo",
+          "interval": "10s",
+          "rules": [
+            {
+              "uid": "gateway-5xx-rate",
+              "title": "Errores 5xx en el gateway",
+              "condition": "B",
+              "data": [
+                {
+                  "refId": "A",
+                  "datasourceUid": "prometheus",
+                  "relativeTimeRange": {
+                    "from": 300,
+                    "to": 0
+                  },
+                  "model": {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "(100 * sum(rate(pharmago_http_requests_total{job=\"PharmaGo.ApiGateway\",endpoint!=\"/health\",status_code=~\"5..\"}[1m])) / sum(rate(pharmago_http_requests_total{job=\"PharmaGo.ApiGateway\",endpoint!=\"/health\"}[1m]))) and on() (sum(increase(pharmago_http_requests_total{job=\"PharmaGo.ApiGateway\",endpoint!=\"/health\",status_code=~\"5..\"}[1m])) >= 3)",
+                    "instant": true,
+                    "range": false,
+                    "refId": "A"
+                  }
+                },
+                {
+                  "refId": "B",
+                  "datasourceUid": "__expr__",
+                  "relativeTimeRange": {
+                    "from": 0,
+                    "to": 0
+                  },
+                  "model": {
+                    "datasource": {
+                      "type": "__expr__",
+                      "uid": "__expr__"
+                    },
+                    "expression": "$A > 5",
+                    "type": "math",
+                    "refId": "B"
+                  }
+                }
+              ],
+              "noDataState": "OK",
+              "execErrState": "Alerting",
+              "for": "30s",
+              "annotations": {
+                "summary": "Más del 5% de las respuestas del gateway son 5xx (al menos 3 en el último minuto) durante 30 segundos. Suele ser un microservicio caído o inaccesible: con el circuito abierto, el gateway responde 503."
+              },
+              "labels": {
+                "severity": "critical",
+                "component": "telemetry"
+              }
+            },
+            {
+              "uid": "gateway-traffic-spike",
+              "title": "Pico de requests en el gateway",
+              "condition": "B",
+              "data": [
+                {
+                  "refId": "A",
+                  "datasourceUid": "prometheus",
+                  "relativeTimeRange": {
+                    "from": 300,
+                    "to": 0
+                  },
+                  "model": {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum(rate(pharmago_http_request_duration_milliseconds_count{job=\"PharmaGo.ApiGateway\",endpoint!=\"/health\"}[1m]))",
+                    "instant": true,
+                    "range": false,
+                    "refId": "A"
+                  }
+                },
+                {
+                  "refId": "B",
+                  "datasourceUid": "__expr__",
+                  "relativeTimeRange": {
+                    "from": 0,
+                    "to": 0
+                  },
+                  "model": {
+                    "datasource": {
+                      "type": "__expr__",
+                      "uid": "__expr__"
+                    },
+                    "expression": "$A > 2",
+                    "type": "math",
+                    "refId": "B"
+                  }
+                }
+              ],
+              "noDataState": "OK",
+              "execErrState": "Alerting",
+              "for": "0s",
+              "annotations": {
+                "summary": "El gateway recibe más de 2 requests/s (promedio del último minuto). El rate limit admite 100 requests por minuto por IP: si el pico viene de pocos clientes, el excedente recibe 429."
+              },
+              "labels": {
+                "severity": "warning",
+                "component": "telemetry"
+              }
+            }
+          ]
         }
       ]
     }

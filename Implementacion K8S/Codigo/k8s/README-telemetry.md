@@ -20,7 +20,9 @@ Los logs de .NET salen como una línea JSON por evento con fecha UTC, nivel, cat
 
 ## Alertas de Grafana
 
-Las reglas se provisionan desde `configmaps/grafana-alerts.yaml`, se evalúan cada 30 segundos y pasan a estado de alerta tras 2 minutos. Las cinco reglas son:
+Las reglas se provisionan desde `configmaps/grafana-alerts.yaml`, en dos grupos.
+
+**Infraestructura PharmaGo.** Se evalúan cada 30 segundos y pasan a estado de alerta tras 2 minutos:
 
 | Regla | Condición |
 |---|---|
@@ -29,6 +31,21 @@ Las reglas se provisionan desde `configmaps/grafana-alerts.yaml`, se evalúan ca
 | Espacio de disco bajo | Disponible en el filesystem principal (`/` o `/data`) < 15% |
 | Errores de red de nodo | Tasa de errores de recepción y transmisión > 0 |
 | CPU de pod alta | Consumo de un pod > 0.4 núcleos |
+
+**Servicio PharmaGo.** Miden lo que reciben los usuarios a través del gateway (`job="PharmaGo.ApiGateway"`), sin contar `/health`, que consultan las probes de Kubernetes. Se evalúan cada 10 segundos:
+
+| Regla | Condición |
+|---|---|
+| Errores 5xx en el gateway | Más del 5% de las respuestas del último minuto son 5xx, con al menos 3 errores, durante 30 segundos. Severidad `critical`. |
+| Pico de requests en el gateway | Más de 2 requests/s en promedio en el último minuto. Pasa a alerta en la primera evaluación, porque un pico dura poco. |
+
+Cuando un microservicio se cae o se queda sin réplicas, el gateway responde 502 y, con el circuito abierto, 503: la regla de 5xx detecta esa caída. El mínimo de 3 errores evita que un error aislado con poco tráfico la dispare. La regla de pico usa `pharmago_http_request_duration_milliseconds_count`, que no separa por código de estado, así que cuenta también las requests que el rate limit rechaza con 429 (100 por minuto por IP).
+
+Los microservicios exportan sus métricas cada 15 segundos (`OTEL_METRIC_EXPORT_INTERVAL` en sus Deployments; el SDK usa 60 por defecto). En una prueba con el gateway real, la regla de 5xx pasó a alerta unos 70 segundos después de apagar pharmacy o de cortar la red hacia él, y se resolvió alrededor de un minuto después de restaurarlo; la de pico se disparó 21 segundos después de una ráfaga de 200 requests. Las dos quedan dentro de la duración máxima de un escenario de `run-chaos.py` (120 segundos).
+
+El corte de red (escenario `network`) se detecta porque el gateway renueva cada 15 segundos sus conexiones con los servicios; ver [README-k8s.md, sección "Resiliencia ante fallas"](README-k8s.md#resiliencia-ante-fallas). Para que aparezca en la regla de 5xx tiene que haber tráfico hacia pharmacy a través del gateway, porque la sonda de ese escenario llama a pharmacy directamente.
+
+La regla de pico no detecta una ráfaga contra un endpoint que el pod del gateway no había atendido desde que arrancó: la serie aparece en Prometheus ya con todo el conteo, y Prometheus necesita dos muestras para calcular una tasa. Antes del escenario `requests` tiene que haber habido tráfico a `/api/drug`.
 
 Las alertas aparecen en **Grafana → Alerting → Alert rules → PharmaGo**. La instalación de Grafana tiene su contacto predeterminado; para enviar notificaciones fuera de Grafana se debe configurar un contacto con el destino del entorno (correo, webhook, etc.).
 
@@ -57,6 +74,6 @@ kubectl logs -n pharmago -l app=pharmago-api-gateway --tail=1
 ./port-forward.sh
 ```
 
-En Prometheus (`http://127.0.0.1:9090`), comprobar `node_cpu_seconds_total`, `container_cpu_usage_seconds_total` y `pharmago_http_requests_total`. El dashboard **PharmaGo - Infra** muestra CPU, memoria, storage y red por nodo y por pod. En Grafana (`http://127.0.0.1:3000`), comprobar los cinco alert rules y la fuente de datos Jaeger. Generar tráfico con `curl http://127.0.0.1:5000/health` y buscar el servicio `PharmaGo.ApiGateway` en Jaeger (`http://127.0.0.1:16686`). En Kibana (`http://127.0.0.1:5601`), crear el data view `pharmago-logs-*` y filtrar por `kubernetes.labels.app: pharmago-api-gateway`; los eventos JSON nuevos deben tener `Message`, `LogLevel` y `Category`.
+En Prometheus (`http://127.0.0.1:9090`), comprobar `node_cpu_seconds_total`, `container_cpu_usage_seconds_total` y `pharmago_http_requests_total`. El dashboard **PharmaGo - Infra** muestra CPU, memoria, storage y red por nodo y por pod. En Grafana (`http://127.0.0.1:3000`), comprobar los siete alert rules y la fuente de datos Jaeger. Generar tráfico con `curl http://127.0.0.1:5000/health` y buscar el servicio `PharmaGo.ApiGateway` en Jaeger (`http://127.0.0.1:16686`). En Kibana (`http://127.0.0.1:5601`), crear el data view `pharmago-logs-*` y filtrar por `kubernetes.labels.app: pharmago-api-gateway`; los eventos JSON nuevos deben tener `Message`, `LogLevel` y `Category`.
 
 Jaeger all-in-one usa almacenamiento en memoria: sus trazas se pierden al reiniciar su pod. Los cinco nodos Minikube de este laboratorio son contenedores sobre una única máquina física; node-exporter mide cada nodo Kubernetes, no separa cinco hosts físicos independientes.

@@ -31,7 +31,7 @@ Para ejecutar uno solo, usar `--scenario requests`, `cpu`, `memory`, `storage`, 
 | `network` | Cambia temporalmente el `targetPort` del Service de pharmacy a un puerto no atendido. Los pods siguen `Ready`; una sonda abre conexiones nuevas al Service para comprobar el corte. | Respuestas fallidas en la sonda durante el corte y HTTP 200 tras restaurarlo. |
 | `component` | Escala `pharmago-pharmacy-service` a cero réplicas y luego restaura la cantidad original. | Respuestas fallidas durante la desconexión, regreso a `Ready` y HTTP 200 tras recuperar. |
 
-El script agrega marcas de tiempo UTC y un resumen de las sondas. Los escenarios de red y componente verifican que la ruta funciona antes de cortarla, que aparecen respuestas fallidas durante la inyección y que vuelve a responder después. El corte de red prueba **conexiones nuevas** al Service; conexiones HTTP persistentes del gateway pueden seguir respondiendo hasta que se cierren. Se puede cruzar la hora con el dashboard `PharmaGo - Overview`, `PharmaGo - Infra`, los logs JSON de Kibana y las trazas del gateway.
+El script agrega marcas de tiempo UTC y un resumen de las sondas. Los escenarios de red y componente verifican que la ruta funciona antes de cortarla, que aparecen respuestas fallidas durante la inyección y que vuelve a responder después. El corte de red prueba **conexiones nuevas** al Service. El gateway renueva sus conexiones con pharmacy cada 15 segundos, así que, si hay tráfico hacia pharmacy a través del gateway, en ese plazo también empieza a fallar y abre el circuito. Se puede cruzar la hora con el dashboard `PharmaGo - Overview`, `PharmaGo - Infra`, los logs JSON de Kibana y las trazas del gateway.
 
 ## Restauración
 
