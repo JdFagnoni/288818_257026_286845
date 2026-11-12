@@ -67,6 +67,10 @@ spec:
           value: "None"
         - name: Logging__LogLevel__Microsoft.Data.SqlClient
           value: "None"
+        # El SDK de OpenTelemetry exporta las métricas cada 60 s por defecto;
+        # cada 15 s las alertas y los dashboards reaccionan a tiempo.
+        - name: OTEL_METRIC_EXPORT_INTERVAL
+          value: "15000"
         # Recursos reducidos para nodos ~5GB (proyecto docente)
         resources:
           requests:
