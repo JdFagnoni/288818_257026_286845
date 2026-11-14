@@ -10,7 +10,7 @@ Capturas y salidas de terminal que respaldan cada ítem de la rúbrica. Cada car
 | `03-despliegues-seguros/` | Ítem 3. Despliegues seguros | [#5](https://github.com/JdFagnoni/288818_257026_286845/issues/5) |
 | `04-telemetria/` | Ítem 4. Telemetría | [#6](https://github.com/JdFagnoni/288818_257026_286845/issues/6) |
 | `05-deteccion-anomalias/` | Ítem 5. Detección de anomalías | [#7](https://github.com/JdFagnoni/288818_257026_286845/issues/7) |
-| `06-plan-contencion/` | Ítem 6. Plan de contención de incidentes | [#8](https://github.com/JdFagnoni/288818_257026_286845/issues/8) |
+| `06-plan-contencion/` | Ítem 6. Plan de contención de incidentes: [06-plan-de-contencion-operativo.md](06-plan-contencion/06-plan-de-contencion-operativo.md) | [#8](https://github.com/JdFagnoni/288818_257026_286845/issues/8) |
 | `07-scripts-caos/` | Ítem 7. Scripts de caos | [#9](https://github.com/JdFagnoni/288818_257026_286845/issues/9) |
 | `08-defensa/` | Ítem 8. Defensa (war-room) | [#10](https://github.com/JdFagnoni/288818_257026_286845/issues/10) |
 | `09-herramientas/` | Tecnología y herramientas de la letra: pipeline CI/CD, tablero y BDD | [#15](https://github.com/JdFagnoni/288818_257026_286845/issues/15), [#16](https://github.com/JdFagnoni/288818_257026_286845/issues/16), [#17](https://github.com/JdFagnoni/288818_257026_286845/issues/17) |
@@ -74,6 +74,20 @@ Técnica: rolling update (`maxSurge: 1`, `maxUnavailable: 0`, `minReadySeconds: 
 | [04-grafana-overview-rollout-inferior.png](03-despliegues-seguros/04-grafana-overview-rollout-inferior.png) | Resto del Overview: ni errores 429 ni errores en `/api/drug` durante los rollouts. | 2026-10-21 |
 | [05-grafana-infra-rollout.png](03-despliegues-seguros/05-grafana-infra-rollout.png) | Dashboard *PharmaGo - Infra* durante los rollouts: CPU y memoria de nodo estables, y CPU y memoria por pod sin picos al reemplazar los pods. | 2026-10-21 |
 
+### 04 · Telemetría
+
+Versión: main con las 7 alertas (PRs #28 y #29) desplegada con `deploy-telemetry.sh`, más la corrección del gráfico *Distribución de Status Codes*. La pila está explicada en [README-telemetry.md](../../Implementacion%20K8S/Codigo/k8s/README-telemetry.md).
+
+| Archivo | Qué muestra | Fecha |
+|---|---|---|
+| [01-grafana-alert-rules.png](04-telemetria/01-grafana-alert-rules.png) | *Alerting → Alert rules*, carpeta PharmaGo: las 7 reglas provisionadas y en **Normal**. Grupo *Infraestructura PharmaGo* (5 reglas, evaluación cada 30 s) y grupo *Servicio PharmaGo* (5xx y pico de requests en el gateway, cada 10 s). | 2026-11-14 |
+| [02-grafana-overview-1.png](04-telemetria/02-grafana-overview-1.png) | *PharmaGo - Overview*, parte superior (15:32 a 15:47): peticiones por segundo y latencia por endpoint, tasa de error (0 %) y throughput total (~1.8 req/s). Casi todo el tráfico es `/health`, que consultan las probes de Kubernetes. | 2026-11-14 |
+| [02-grafana-overview-2.png](04-telemetria/02-grafana-overview-2.png) | Overview, parte inferior: *Distribución de Status Codes* con `200` = 100 %, después de corregir la consulta que dividía series con y sin la etiqueta `status_code`. *Rate Limit Errors (429)* y *Tasa de Error por Tipo* dicen "No data", que es lo esperado sin fallas. | 2026-11-14 |
+| [03-grafana-infra-1.png](04-telemetria/03-grafana-infra-1.png), [-2](04-telemetria/03-grafana-infra-2.png), [-3](04-telemetria/03-grafana-infra-3.png) | *PharmaGo - Infra* completo, de arriba hacia abajo: CPU, memoria y disco por nodo (una serie por cada uno de los 5 nodos), CPU, memoria, red y storage efímero por pod. Valores estables, fuera del reinicio del cluster. | 2026-11-14 |
+| [04-kibana-log-json.png](04-telemetria/04-kibana-log-json.png) | Kibana, data view `pharmago-logs-*`, filtro `kubernetes.labels.app : "pharmago-api-gateway"`: 120 eventos y uno abierto con los campos JSON `Message`, `LogLevel` y `Category`, más los metadatos de Kubernetes que agrega Fluent Bit (pod, nodo `pharmago-m03`, imagen). | 2026-11-14 |
+| [05-jaeger-traza-gateway.png](04-telemetria/05-jaeger-traza-gateway.png) | Jaeger: traza de `GET /api/drug` con 3 spans en 2 servicios. El gateway recibe el request (`/api/drug`, 5.11 ms), lo reenvía (`HTTP GET`, 4.55 ms) y pharmacy lo atiende (`api/Drug`, 3.79 ms). | 2026-11-14 |
+| [06-kubectl-top.txt](04-telemetria/06-kubectl-top.txt) | `kubectl top nodes` y `kubectl top pods -n pharmago`, con el addon metrics-server de Minikube. Coincide con los paneles de Infra: los pods del backend usan 1–2 m de CPU y 37–64 MiB. | 2026-11-14 |
+
 ### 05 · Detección de anomalías
 
 Muestra exportada de Prometheus para el nodo `pharmago-m02` (33 instantes, CPU, memoria, disco y red). Sirve para demostrar el pipeline hasta que lleguen los datasets docentes. El notebook y las instrucciones están en [anomaly_detection](../../Implementacion%20K8S/Codigo/anomaly_detection/README.md).
@@ -85,11 +99,16 @@ Muestra exportada de Prometheus para el nodo `pharmago-m02` (33 instantes, CPU, 
 
 ### 06 · Plan de contención de incidentes
 
-El [documento editable en Google Docs](https://docs.google.com/document/d/1j1nZYZkYNjlWayybQXpmq2Y2caZzaIblXhuTcVHJRmk/edit) es la versión de trabajo. El PDF siguiente conserva una copia de la versión revisada en este repositorio.
+Hay dos documentos que se complementan:
+
+- **Plan formal:** el [documento editable en Google Docs](https://docs.google.com/document/d/1j1nZYZkYNjlWayybQXpmq2Y2caZzaIblXhuTcVHJRmk/edit) es la versión de trabajo. El PDF de abajo conserva una copia de la versión revisada.
+- **Plan operativo para el war-room:** [06-plan-de-contencion-operativo.md](06-plan-contencion/06-plan-de-contencion-operativo.md), con runbooks por escenario, comandos, consultas, plantillas y el checklist para la defensa.
 
 | Archivo | Qué muestra | Fecha |
 |---|---|---|
 | [01-plan-contencion-incidentes.pdf](06-plan-contencion/01-plan-contencion-incidentes.pdf) | Plan de contención con responsables, canal de comunicación, clasificación de severidad, procedimientos para los seis escenarios de caos y SQL Server, verificación, escalamiento y postmortem. | 2026-11-14 |
+| [01-prueba-ajuste-rate-limit.txt](06-plan-contencion/01-prueba-ajuste-rate-limit.txt) | Mitigación del runbook de pico de requests: bajar el límite del gateway con `kubectl set env` a 20/min. De 60 requests, 40 pasan y 20 reciben `429` (2 réplicas × 20). Al quitar la variable, vuelve a 60 de 60. | 2026-11-14 |
+| [06-plan-de-contencion-operativo.md](06-plan-contencion/06-plan-de-contencion-operativo.md) | Plan operativo para el war-room (ver arriba). | 2026-11-14 |
 
 ### 07 · Scripts de caos
 

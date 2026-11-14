@@ -1,0 +1,30 @@
+$ kubectl set env deployment/pharmago-api-gateway -n pharmago IpRateLimiting__GeneralRules__1__Limit=20
+# Prueba de la mitigación "ajustar los límites" del runbook 7.1 (docs/plan-de-contencion.md)
+
+Fecha: 2026-11-14 · Cluster: pharmago (5 nodos Minikube) · Gateway: 2 réplicas
+Ráfaga: un pod busybox:1.36 en el nodo ops lanza 60 GET seguidos a http://pharmago-api-gateway/api/drug
+y cuenta los códigos HTTP. El rate limiting es por IP y cada réplica del gateway lleva su propio contador.
+
+== 1. Línea de base (regla general: 100 req/min por réplica)
+     60 200
+
+== 2. Límite bajado a 20 req/min por réplica
+$ kubectl set env deployment/pharmago-api-gateway -n pharmago IpRateLimiting__GeneralRules__1__Limit=20
+deployment.apps/pharmago-api-gateway env updated
+$ kubectl rollout status deployment/pharmago-api-gateway -n pharmago --timeout=180s
+deployment "pharmago-api-gateway" successfully rolled out
+env: [{"name":"ASPNETCORE_ENVIRONMENT","value":"Production"},{"name":"IpRateLimiting__GeneralRules__1__Limit","value":"20"}]
+     40 200
+     20 429
+
+== 3. Revertido
+$ kubectl set env deployment/pharmago-api-gateway -n pharmago IpRateLimiting__GeneralRules__1__Limit-
+deployment.apps/pharmago-api-gateway env updated
+$ kubectl rollout status deployment/pharmago-api-gateway -n pharmago --timeout=180s
+deployment "pharmago-api-gateway" successfully rolled out
+env: [{"name":"ASPNETCORE_ENVIRONMENT","value":"Production"}]
+     60 200
+
+Conclusión: la variable de entorno pisa IpRateLimiting.GeneralRules[1].Limit de appsettings.json.
+Con 2 réplicas, el límite efectivo por IP es el doble del configurado (40 = 2 × 20).
+Cada cambio es un rolling update sin caída; quitar la variable vuelve al valor de appsettings.json.
