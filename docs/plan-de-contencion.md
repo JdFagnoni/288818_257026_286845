@@ -84,7 +84,7 @@ Durante un incidente se arma el **war-room** con tres roles. **Los roles se asig
 | **Responsable técnico (RT)** | Diagnostica las fallas, inspecciona los componentes afectados (K\*, Q\*) y ejecuta la contención y la recuperación **cuando el IC las autoriza**. Anuncia en voz alta cada comando que cambia algo. | No aplica solo una mitigación con riesgo. |
 | **Responsable de observabilidad y comunicaciones (RO)** | Supervisa las métricas y alertas (Grafana, Kibana, Jaeger), registra los acontecimientos con la hora ([sección 9](#9-plantilla-de-registro-de-incidente)) y mantiene informado al equipo con los mensajes de estado. | No corre comandos que modifiquen el cluster. |
 
-Asignación del incidente en curso: IC `________` · RT `________` · RO `________`.
+Asignación por defecto: **IC Federico Galusso** · **RT Juan Diego Fagnoni** · **RO Juan Pedro Michelini**. Al abrir cada incidente el IC la confirma o la cambia (por ejemplo, si alguien está ocupado con otro incidente).
 
 ---
 
@@ -160,7 +160,7 @@ Por eso la detección **no depende solo de las alertas**. El RO mira los paneles
 
 ## 5. Escalamiento y comunicación
 
-- **Canal único:** `________` (por ejemplo, el grupo del equipo). Todo lo que se decide se dice en voz alta en la sala **y** queda en el registro. No se abren canales paralelos, para evitar acciones contradictorias.
+- **Canal único:** **Microsoft Teams**. Todo lo que se decide se dice en voz alta en la sala **y** queda en el registro. No se abren canales paralelos, para evitar acciones contradictorias.
 - **Quién habla con los docentes:** el IC.
 - **Frecuencia de actualización:** según la SEV ([sección 3](#3-clasificación-de-incidentes)).
 - **Registro centralizado:** la plantilla de la [sección 9](#9-plantilla-de-registro-de-incidente). Campos: identificador, severidad, fecha y hora, componente afectado, impacto, acciones realizadas, estado y responsable.
@@ -671,7 +671,7 @@ Corridas registradas: [07-scripts-caos](evidencia/07-scripts-caos/) (los seis es
 
 ### 12.1 Roles
 
-Se asignan al empezar cada incidente ([sección 2](#2-roles-y-responsabilidades)). Asignación inicial propuesta: IC `________` · RT `________` · RO `________`.
+Se confirman al empezar cada incidente ([sección 2](#2-roles-y-responsabilidades)). Por defecto: IC Federico Galusso · RT Juan Diego Fagnoni · RO Juan Pedro Michelini. Canal: Microsoft Teams.
 
 ### 12.2 Qué tener abierto
 
