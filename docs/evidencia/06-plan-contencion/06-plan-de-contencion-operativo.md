@@ -244,7 +244,7 @@ Hay dos formas de inyectar caos:
 |---|---|---|
 | Cortar la fuente (variante A u otro pod) | `kubectl delete pod <pod-origen> -n pharmago` | 🟢 |
 | Escalar el gateway | `kubectl scale deployment/pharmago-api-gateway -n pharmago --replicas=3` | 🟠 Las réplicas tienen afinidad con `pharmago-m03`: si no hay memoria, el pod queda `Pending`. Además sube el límite efectivo por IP (~300/min). Volver a 2 al cerrar. |
-| Ajustar los límites con un cambio controlado de configuración | `kubectl set env deployment/pharmago-api-gateway -n pharmago IpRateLimiting__GeneralRules__1__Limit=50`. Probado el 2026-11-14 con `=20`: 60 requests dieron 40 `200` y 20 `429`; al revertir, 60 `200` ([evidencia](evidencia/06-plan-contencion/01-prueba-ajuste-rate-limit.txt)). En modo `IP`, el límite que se aplica está en `IpRateLimiting.GeneralRules`, no en `RateLimiting.MaxRequestsPerMinute`. El índice `1` es la regla `*` por minuto (el `0` es la de login), y los `__` son la sintaxis de ASP.NET Core para pisar `appsettings.json` desde una variable de entorno. | 🟠 Provoca un rolling update. Cada réplica lleva su propio contador, así que el límite conjunto queda en ~2 × `<n>`. Revertir con `kubectl set env deployment/pharmago-api-gateway -n pharmago IpRateLimiting__GeneralRules__1__Limit-`. |
+| Ajustar los límites con un cambio controlado de configuración | `kubectl set env deployment/pharmago-api-gateway -n pharmago IpRateLimiting__GeneralRules__1__Limit=50`. Probado el 2026-11-14 con `=20`: 60 requests dieron 40 `200` y 20 `429`; al revertir, 60 `200` ([evidencia](01-prueba-ajuste-rate-limit.txt)). En modo `IP`, el límite que se aplica está en `IpRateLimiting.GeneralRules`, no en `RateLimiting.MaxRequestsPerMinute`. El índice `1` es la regla `*` por minuto (el `0` es la de login), y los `__` son la sintaxis de ASP.NET Core para pisar `appsettings.json` desde una variable de entorno. | 🟠 Provoca un rolling update. Cada réplica lleva su propio contador, así que el límite conjunto queda en ~2 × `<n>`. Revertir con `kubectl set env deployment/pharmago-api-gateway -n pharmago IpRateLimiting__GeneralRules__1__Limit-`. |
 
 **Validación:**
 - Q2 vuelve a la línea base (~0.08 req/s por endpoint de negocio).
@@ -641,7 +641,7 @@ Acciones realizadas y su resultado.
 
 ## 11. Validación mediante ingeniería del caos
 
-La efectividad del plan se evalúa con experimentos controlados de los seis escenarios, usando `run-chaos.py`. El script está documentado en [chaos-engineering/README.md](../Implementacion%20K8S/Codigo/chaos-engineering/README.md).
+La efectividad del plan se evalúa con experimentos controlados de los seis escenarios, usando `run-chaos.py`. El script está documentado en [chaos-engineering/README.md](../../../Implementacion%20K8S/Codigo/chaos-engineering/README.md).
 
 **Antes de cada prueba:**
 - verificar el estado inicial (checklist 12.3),
@@ -663,7 +663,7 @@ La efectividad del plan se evalúa con experimentos controlados de los seis esce
 - comprobar que el sistema volvió a su estado inicial (sección 8),
 - comparar el resultado con lo esperado en cada runbook.
 
-Corridas registradas: [07-scripts-caos](evidencia/07-scripts-caos/) (los seis escenarios y las métricas de CPU, memoria y storage) y [02-alta-disponibilidad](evidencia/02-alta-disponibilidad/) (circuit breaker y MTTR).
+Corridas registradas: [07-scripts-caos](../07-scripts-caos/) (los seis escenarios y las métricas de CPU, memoria y storage) y [02-alta-disponibilidad](../02-alta-disponibilidad/) (circuit breaker y MTTR).
 
 ---
 
@@ -699,7 +699,7 @@ done'
 # Al terminar:    kubectl delete pod war-room-traffic -n pharmago
 ```
 
-Son 15 req/min, por debajo del rate limiting. Replica el tráfico de la [línea base](evidencia/00-linea-base/06-metricas-linea-base.txt).
+Son 15 req/min, por debajo del rate limiting. Replica el tráfico de la [línea base](../00-linea-base/06-metricas-linea-base.txt).
 
 ### 12.3 Cluster sano antes de arrancar
 
@@ -772,7 +772,7 @@ En el archivo crudo, los `|` de las expresiones regulares están escapados como 
 | K7 | Consumo en vivo | `kubectl top pods -n pharmago` (requiere el addon metrics-server; ver 12.3) |
 | K8 | Prueba desde dentro del cluster | `kubectl run war-room-check -n pharmago --rm -i --restart=Never --image=busybox:1.36 --image-pull-policy=IfNotPresent -- wget -S -q -T 3 -O /dev/null http://pharmago-api-gateway/api/drug` (cambiar la URL según el caso) |
 
-Restauración completa si `run-chaos.py` se interrumpe (tomada de [chaos-engineering/README.md](../Implementacion%20K8S/Codigo/chaos-engineering/README.md#restauración)):
+Restauración completa si `run-chaos.py` se interrumpe (tomada de [chaos-engineering/README.md](../../../Implementacion%20K8S/Codigo/chaos-engineering/README.md#restauración)):
 
 ```bash
 kubectl patch svc pharmago-pharmacy-service -n pharmago --type=json \
@@ -786,7 +786,7 @@ kubectl delete pods -n pharmago -l app.kubernetes.io/name=pharmago-chaos --ignor
 
 ## Evidencias
 
-La aplicación del plan se documenta en [docs/evidencia](evidencia/README.md) con:
+La aplicación del plan se documenta en [docs/evidencia](../README.md) con:
 
 - capturas de Grafana,
 - métricas de Prometheus,
@@ -809,8 +809,8 @@ La validación con ingeniería del caos permite comprobar si funciona y proponer
 
 ## Referencias
 
-- [run-chaos.py](../Implementacion%20K8S/Codigo/chaos-engineering/run-chaos.py) y su [README](../Implementacion%20K8S/Codigo/chaos-engineering/README.md)
-- [grafana-alerts.yaml](../Implementacion%20K8S/Codigo/k8s/configmaps/grafana-alerts.yaml)
-- [README-k8s.md](../Implementacion%20K8S/Codigo/k8s/README-k8s.md): "Despliegue sin caída", "Resiliencia ante fallas" y "Acceso a los Servicios"
-- [README-telemetry.md](../Implementacion%20K8S/Codigo/k8s/README-telemetry.md)
-- Evidencia: [00-linea-base](evidencia/00-linea-base/), [02-alta-disponibilidad](evidencia/02-alta-disponibilidad/), [07-scripts-caos](evidencia/07-scripts-caos/)
+- [run-chaos.py](../../../Implementacion%20K8S/Codigo/chaos-engineering/run-chaos.py) y su [README](../../../Implementacion%20K8S/Codigo/chaos-engineering/README.md)
+- [grafana-alerts.yaml](../../../Implementacion%20K8S/Codigo/k8s/configmaps/grafana-alerts.yaml)
+- [README-k8s.md](../../../Implementacion%20K8S/Codigo/k8s/README-k8s.md): "Despliegue sin caída", "Resiliencia ante fallas" y "Acceso a los Servicios"
+- [README-telemetry.md](../../../Implementacion%20K8S/Codigo/k8s/README-telemetry.md)
+- Evidencia: [00-linea-base](../00-linea-base/), [02-alta-disponibilidad](../02-alta-disponibilidad/), [07-scripts-caos](../07-scripts-caos/)

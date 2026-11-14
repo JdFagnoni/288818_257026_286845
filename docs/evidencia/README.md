@@ -10,7 +10,7 @@ Capturas y salidas de terminal que respaldan cada ítem de la rúbrica. Cada car
 | `03-despliegues-seguros/` | Ítem 3. Despliegues seguros | [#5](https://github.com/JdFagnoni/288818_257026_286845/issues/5) |
 | `04-telemetria/` | Ítem 4. Telemetría | [#6](https://github.com/JdFagnoni/288818_257026_286845/issues/6) |
 | `05-deteccion-anomalias/` | Ítem 5. Detección de anomalías | [#7](https://github.com/JdFagnoni/288818_257026_286845/issues/7) |
-| `06-plan-contencion/` | Ítem 6. Plan de contención de incidentes: [plan-de-contencion.md](../plan-de-contencion.md) | [#8](https://github.com/JdFagnoni/288818_257026_286845/issues/8) |
+| `06-plan-contencion/` | Ítem 6. Plan de contención de incidentes: [06-plan-de-contencion-operativo.md](06-plan-contencion/06-plan-de-contencion-operativo.md) | [#8](https://github.com/JdFagnoni/288818_257026_286845/issues/8) |
 | `07-scripts-caos/` | Ítem 7. Scripts de caos | [#9](https://github.com/JdFagnoni/288818_257026_286845/issues/9) |
 | `08-defensa/` | Ítem 8. Defensa (war-room) | [#10](https://github.com/JdFagnoni/288818_257026_286845/issues/10) |
 | `09-herramientas/` | Tecnología y herramientas de la letra: pipeline CI/CD, tablero y BDD | [#15](https://github.com/JdFagnoni/288818_257026_286845/issues/15), [#16](https://github.com/JdFagnoni/288818_257026_286845/issues/16), [#17](https://github.com/JdFagnoni/288818_257026_286845/issues/17) |
@@ -99,7 +99,7 @@ Muestra exportada de Prometheus para el nodo `pharmago-m02` (33 instantes, CPU, 
 
 ### 06 · Plan de contención
 
-Plan: [plan-de-contencion.md](../plan-de-contencion.md).
+Plan: [06-plan-de-contencion-operativo.md](06-plan-contencion/06-plan-de-contencion-operativo.md).
 
 | Archivo | Qué muestra | Fecha |
 |---|---|---|
