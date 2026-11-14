@@ -74,6 +74,16 @@ Técnica: rolling update (`maxSurge: 1`, `maxUnavailable: 0`, `minReadySeconds: 
 | [04-grafana-overview-rollout-inferior.png](03-despliegues-seguros/04-grafana-overview-rollout-inferior.png) | Resto del Overview: ni errores 429 ni errores en `/api/drug` durante los rollouts. | 2026-10-21 |
 | [05-grafana-infra-rollout.png](03-despliegues-seguros/05-grafana-infra-rollout.png) | Dashboard *PharmaGo - Infra* durante los rollouts: CPU y memoria de nodo estables, y CPU y memoria por pod sin picos al reemplazar los pods. | 2026-10-21 |
 
+### 04 · Telemetría
+
+Versión: main con las 7 alertas (PRs #28 y #29) desplegada con `deploy-telemetry.sh`, más la corrección del gráfico *Distribución de Status Codes*. La pila está explicada en [README-telemetry.md](../../Implementacion%20K8S/Codigo/k8s/README-telemetry.md).
+
+| Archivo | Qué muestra | Fecha |
+|---|---|---|
+| [01-grafana-alert-rules.png](04-telemetria/01-grafana-alert-rules.png) | *Alerting → Alert rules*, carpeta PharmaGo: las 7 reglas provisionadas y en **Normal**. Grupo *Infraestructura PharmaGo* (5 reglas, evaluación cada 30 s) y grupo *Servicio PharmaGo* (5xx y pico de requests en el gateway, cada 10 s). | 2026-11-14 |
+| [02-grafana-overview-superior.png](04-telemetria/02-grafana-overview-superior.png) | *PharmaGo - Overview*, mitad superior: peticiones por segundo y latencia por endpoint, tasa de error (0 %) y throughput total (~2 req/s, casi todo `/health` de las probes). El tramo de las 15:15 a las 15:22 corresponde al reinicio del cluster y al despliegue de la telemetría. | 2026-11-14 |
+| [03-grafana-overview-inferior.png](04-telemetria/03-grafana-overview-inferior.png) | Resto del Overview: *Distribución de Status Codes* ya muestra datos (`200` = 100 %), después de corregir la consulta que dividía series con y sin la etiqueta `status_code`. Sin `429` ni errores por tipo: "No data" es lo esperado sin fallas. | 2026-11-14 |
+
 ### 05 · Detección de anomalías
 
 Muestra exportada de Prometheus para el nodo `pharmago-m02` (33 instantes, CPU, memoria, disco y red). Sirve para demostrar el pipeline hasta que lleguen los datasets docentes. El notebook y las instrucciones están en [anomaly_detection](../../Implementacion%20K8S/Codigo/anomaly_detection/README.md).
