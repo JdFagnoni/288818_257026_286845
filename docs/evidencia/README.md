@@ -10,7 +10,7 @@ Capturas y salidas de terminal que respaldan cada ítem de la rúbrica. Cada car
 | `03-despliegues-seguros/` | Ítem 3. Despliegues seguros | [#5](https://github.com/JdFagnoni/288818_257026_286845/issues/5) |
 | `04-telemetria/` | Ítem 4. Telemetría | [#6](https://github.com/JdFagnoni/288818_257026_286845/issues/6) |
 | `05-deteccion-anomalias/` | Ítem 5. Detección de anomalías | [#7](https://github.com/JdFagnoni/288818_257026_286845/issues/7) |
-| `06-plan-contencion/` | Ítem 6. Plan de contención de incidentes: [06-plan-de-contencion-operativo.md](06-plan-contencion/06-plan-de-contencion-operativo.md) | [#8](https://github.com/JdFagnoni/288818_257026_286845/issues/8) |
+| `06-plan-contencion/` | Ítem 6. Plan de contención de incidentes: [01-plan-de-contencion-operativo.md](06-plan-contencion/01-plan-de-contencion-operativo.md) | [#8](https://github.com/JdFagnoni/288818_257026_286845/issues/8) |
 | `07-scripts-caos/` | Ítem 7. Scripts de caos | [#9](https://github.com/JdFagnoni/288818_257026_286845/issues/9) |
 | `08-defensa/` | Ítem 8. Defensa (war-room) | [#10](https://github.com/JdFagnoni/288818_257026_286845/issues/10) |
 | `09-herramientas/` | Tecnología y herramientas de la letra: pipeline CI/CD, tablero y BDD | [#15](https://github.com/JdFagnoni/288818_257026_286845/issues/15), [#16](https://github.com/JdFagnoni/288818_257026_286845/issues/16), [#17](https://github.com/JdFagnoni/288818_257026_286845/issues/17) |
@@ -102,13 +102,13 @@ Muestra exportada de Prometheus para el nodo `pharmago-m02` (33 instantes, CPU, 
 Hay dos documentos que se complementan:
 
 - **Plan formal:** el [documento editable en Google Docs](https://docs.google.com/document/d/1j1nZYZkYNjlWayybQXpmq2Y2caZzaIblXhuTcVHJRmk/edit) es la versión de trabajo. El PDF de abajo conserva una copia de la versión revisada.
-- **Plan operativo para el war-room:** [06-plan-de-contencion-operativo.md](06-plan-contencion/06-plan-de-contencion-operativo.md), con runbooks por escenario, comandos, consultas, plantillas y el checklist para la defensa.
+- **Plan operativo para el war-room:** [01-plan-de-contencion-operativo.md](06-plan-contencion/01-plan-de-contencion-operativo.md), con runbooks por escenario, comandos, consultas, plantillas y el checklist para la defensa.
 
 | Archivo | Qué muestra | Fecha |
 |---|---|---|
 | [01-plan-contencion-incidentes.pdf](06-plan-contencion/01-plan-contencion-incidentes.pdf) | Plan de contención con responsables, canal de comunicación, clasificación de severidad, procedimientos para los seis escenarios de caos y SQL Server, verificación, escalamiento y postmortem. | 2026-11-14 |
 | [01-prueba-ajuste-rate-limit.txt](06-plan-contencion/01-prueba-ajuste-rate-limit.txt) | Mitigación del runbook de pico de requests: bajar el límite del gateway con `kubectl set env` a 20/min. De 60 requests, 40 pasan y 20 reciben `429` (2 réplicas × 20). Al quitar la variable, vuelve a 60 de 60. | 2026-11-14 |
-| [06-plan-de-contencion-operativo.md](06-plan-contencion/06-plan-de-contencion-operativo.md) | Plan operativo para el war-room (ver arriba). | 2026-11-14 |
+| [01-plan-de-contencion-operativo.md](06-plan-contencion/01-plan-de-contencion-operativo.md) | Plan operativo para el war-room (ver arriba). | 2026-11-14 |
 
 ### 07 · Scripts de caos
 
