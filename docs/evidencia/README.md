@@ -83,6 +83,14 @@ Muestra exportada de Prometheus para el nodo `pharmago-m02` (33 instantes, CPU, 
 | [01-comparacion-prometheus.png](05-deteccion-anomalias/01-comparacion-prometheus.png) | Anomalías sobre CPU marcadas por Isolation Forest y One-Class SVM RBF en dos paneles. | 2026-10-24 |
 | [02-resumen-prometheus.txt](05-deteccion-anomalias/02-resumen-prometheus.txt) | Parámetros, métricas usadas, cantidad de anomalías e intersección de ambos modelos. | 2026-10-24 |
 
+### 06 · Plan de contención
+
+Plan: [plan-de-contencion.md](../plan-de-contencion.md).
+
+| Archivo | Qué muestra | Fecha |
+|---|---|---|
+| [01-prueba-ajuste-rate-limit.txt](06-plan-contencion/01-prueba-ajuste-rate-limit.txt) | Mitigación del runbook de pico de requests: bajar el límite del gateway con `kubectl set env` a 20/min. De 60 requests, 40 pasan y 20 reciben `429` (2 réplicas × 20). Al quitar la variable, vuelve a 60 de 60. | 2026-11-14 |
+
 ### 07 · Scripts de caos
 
 El ejecutor está documentado en [chaos-engineering/README.md](../../Implementacion%20K8S/Codigo/chaos-engineering/README.md). Las pruebas se ejecutaron sobre el cluster `pharmago` con cinco nodos; los pods de carga se ubicaron junto al gateway y las sondas en el nodo `ops`.
