@@ -278,7 +278,7 @@ Hay dos formas de inyectar caos:
    - K3 → `pharmago-chaos-cpu-*` y su nodo,
    - Q6 (ventana de 1 m, más rápida que el panel),
    - Q9 para el nodo,
-   - K7 `kubectl top pods -n pharmago`. Verificado el 2026-11-12: coincide con Q6.
+   - K7 `kubectl top pods -n pharmago`. Requiere el addon metrics-server de Minikube (chequeo en 12.3); si no está, usar Q6.
 2. Determinar el origen con K1, K4 y los logs del pod (K5). En la variante B no hay pod de caos: el consumo lo tiene un pod de la app.
 3. Verificar los límites configurados: 0.5 CPU en los pods de la app y 1 CPU en el pod de carga.
 4. Descartar impacto: con Q1 = 0 y Q5 < 1000 ms, solo están afectados los recursos (SEV3).
@@ -715,7 +715,7 @@ Son 15 req/min, por debajo del rate limiting. Replica el tráfico de la [línea 
 | Ruta de punta a punta | K8 con `/api/drug` y `/test-health` | `HTTP/1.1 200 OK` |
 | Errores | Q1 | 0 |
 | Alertas | Grafana → Alert rules | Las 7 en **Normal** |
-| metrics-server (para K7) | `kubectl top nodes` | Valores para los 5 nodos (funcionaba el 2026-11-12). Si falla, no usar K7: usar Q6 y Q7. |
+| metrics-server (para K7) | `kubectl top nodes` | Valores para los 5 nodos. Si da `Metrics API not available`, activar el addon: `minikube addons enable metrics-server -p pharmago` (tarda ~1 min en tener datos). Mientras tanto, usar Q6 y Q7. |
 | Mapeo de `Message` en Kibana | Kibana → Dev Tools: `GET pharmago-logs-*/_field_caps?fields=Message,Message.keyword` | `Message` = `text` y `Message.keyword` = `keyword` (verificado el 2026-11-14 en todos los índices) |
 | Tráfico de fondo corriendo | `kubectl logs -n pharmago war-room-traffic --tail=6` | Líneas `ok` para `/api/drug`, `/api/pharmacy` y `/test-health` |
 | Logs | Kibana | Hay eventos del gateway de los últimos 2 min |
@@ -769,7 +769,7 @@ En el archivo crudo, los `|` de las expresiones regulares están escapados como 
 | K4 | Últimos eventos | `kubectl get events -n pharmago --sort-by=.lastTimestamp \| tail -20` |
 | K5 | Logs del gateway | `kubectl logs -n pharmago -l app=pharmago-api-gateway --tail=50 --prefix` |
 | K6 | Diferencias con el repo | `kubectl diff -f services/backend/ -f deployments/backend/` |
-| K7 | Consumo en vivo | `kubectl top pods -n pharmago` |
+| K7 | Consumo en vivo | `kubectl top pods -n pharmago` (requiere el addon metrics-server; ver 12.3) |
 | K8 | Prueba desde dentro del cluster | `kubectl run war-room-check -n pharmago --rm -i --restart=Never --image=busybox:1.36 --image-pull-policy=IfNotPresent -- wget -S -q -T 3 -O /dev/null http://pharmago-api-gateway/api/drug` (cambiar la URL según el caso) |
 
 Restauración completa si `run-chaos.py` se interrumpe (tomada de [chaos-engineering/README.md](../Implementacion%20K8S/Codigo/chaos-engineering/README.md#restauración)):

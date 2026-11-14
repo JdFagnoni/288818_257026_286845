@@ -1,0 +1,34 @@
+$ kubectl top nodes
+NAME           CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
+pharmago       132m         1%       1094Mi          6%          
+pharmago-m02   106m         1%       3564Mi          22%         
+pharmago-m03   30m          0%       367Mi           2%          
+pharmago-m04   30m          0%       411Mi           2%          
+pharmago-m05   108m         1%       233Mi           1%          
+
+$ kubectl top pods -n pharmago
+NAME                                         CPU(cores)   MEMORY(bytes)   
+elasticsearch-854f6d8bd4-pt6j8               27m          1049Mi          
+fluent-bit-5g97x                             1m           5Mi             
+fluent-bit-c9q8p                             2m           6Mi             
+fluent-bit-hbpg7                             2m           5Mi             
+fluent-bit-pgkm6                             2m           6Mi             
+fluent-bit-vb2gk                             1m           6Mi             
+grafana-b7fdd8864-tqjgz                      3m           59Mi            
+jaeger-7895b79f89-cp4g5                      1m           32Mi            
+kibana-5db7f755b7-z64cl                      14m          578Mi           
+node-exporter-ctlhs                          1m           8Mi             
+node-exporter-p4rdz                          1m           8Mi             
+node-exporter-tlpxm                          1m           8Mi             
+node-exporter-vhpz6                          1m           8Mi             
+node-exporter-zrjkw                          1m           9Mi             
+otlp-collector-6bbff8fdbc-ct8sv              7m           93Mi            
+pharmago-api-gateway-7655d88589-n74gs        1m           37Mi            
+pharmago-api-gateway-7655d88589-t8p68        1m           45Mi            
+pharmago-db-5c4fd499cc-pd8qf                 11m          1151Mi          
+pharmago-pharmacy-service-7cfd49f48b-fn5pj   1m           64Mi            
+pharmago-pharmacy-service-7cfd49f48b-vgsfn   2m           62Mi            
+pharmago-ui-8686f57578-n6ssv                 1m           7Mi             
+pharmago-users-service-b859dcffb-bpn7z       2m           52Mi            
+pharmago-users-service-b859dcffb-nvcjj       2m           52Mi            
+prometheus-59897df6cb-6xcgh                  4m           90Mi            
