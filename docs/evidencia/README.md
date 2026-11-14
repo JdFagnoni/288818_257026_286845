@@ -83,6 +83,14 @@ Muestra exportada de Prometheus para el nodo `pharmago-m02` (33 instantes, CPU, 
 | [01-comparacion-prometheus.png](05-deteccion-anomalias/01-comparacion-prometheus.png) | Anomalías sobre CPU marcadas por Isolation Forest y One-Class SVM RBF en dos paneles. | 2026-10-24 |
 | [02-resumen-prometheus.txt](05-deteccion-anomalias/02-resumen-prometheus.txt) | Parámetros, métricas usadas, cantidad de anomalías e intersección de ambos modelos. | 2026-10-24 |
 
+### 06 · Plan de contención de incidentes
+
+El [documento editable en Google Docs](https://docs.google.com/document/d/1j1nZYZkYNjlWayybQXpmq2Y2caZzaIblXhuTcVHJRmk/edit) es la versión de trabajo. El PDF siguiente conserva una copia de la versión revisada en este repositorio.
+
+| Archivo | Qué muestra | Fecha |
+|---|---|---|
+| [01-plan-contencion-incidentes.pdf](06-plan-contencion/01-plan-contencion-incidentes.pdf) | Plan de contención con responsables, canal de comunicación, clasificación de severidad, procedimientos para los seis escenarios de caos y SQL Server, verificación, escalamiento y postmortem. | 2026-11-14 |
+
 ### 07 · Scripts de caos
 
 El ejecutor está documentado en [chaos-engineering/README.md](../../Implementacion%20K8S/Codigo/chaos-engineering/README.md). Las pruebas se ejecutaron sobre el cluster `pharmago` con cinco nodos; los pods de carga se ubicaron junto al gateway y las sondas en el nodo `ops`.
