@@ -716,7 +716,7 @@ Son 15 req/min, por debajo del rate limiting. Replica el tráfico de la [línea 
 | Errores | Q1 | 0 |
 | Alertas | Grafana → Alert rules | Las 7 en **Normal** |
 | metrics-server (para K7) | `kubectl top nodes` | Valores para los 5 nodos (funcionaba el 2026-11-12). Si falla, no usar K7: usar Q6 y Q7. |
-| Mapeo de `Message` en Kibana `[[VERIFICAR]]` | Kibana → Dev Tools: `GET pharmago-logs-*/_field_caps?fields=Message,Message.keyword` | `Message` = `text` y `Message.keyword` = `keyword` (mapeo dinámico por defecto: el repo no define uno explícito) |
+| Mapeo de `Message` en Kibana | Kibana → Dev Tools: `GET pharmago-logs-*/_field_caps?fields=Message,Message.keyword` | `Message` = `text` y `Message.keyword` = `keyword` (verificado el 2026-11-14 en todos los índices) |
 | Tráfico de fondo corriendo | `kubectl logs -n pharmago war-room-traffic --tail=6` | Líneas `ok` para `/api/drug`, `/api/pharmacy` y `/test-health` |
 | Logs | Kibana | Hay eventos del gateway de los últimos 2 min |
 
@@ -757,7 +757,7 @@ En el archivo crudo, los `|` de las expresiones regulares están escapados como 
 | Errores de pharmacy | `kubernetes.labels.app : "pharmago-pharmacy-service" and LogLevel : "Error"` |
 | Errores de users | `kubernetes.labels.app : "pharmago-users-service" and LogLevel : "Error"` |
 
-Con el mapeo dinámico de Elasticsearch, `Message` debería ser `text` (sirve la búsqueda por frase) y `Message.keyword` debería ser `keyword` (solo coincidencia exacta). `[[VERIFICAR]]` con el chequeo de `_field_caps` de la sección 12.3. Si `Message` resultara ser `keyword`, buscar el texto libre sin campo, por ejemplo `"Circuit breaker ABIERTO"`.
+`Message` es `text` (sirve la búsqueda por frase) y `Message.keyword` es `keyword` (solo coincidencia exacta); verificado el 2026-11-14 con `_field_caps` en todos los índices `pharmago-logs-*`. Los logs del circuit breaker y de los reintentos recién aparecen cuando hay una falla: antes de la defensa no hay eventos para probar esas búsquedas.
 
 ### kubectl
 
