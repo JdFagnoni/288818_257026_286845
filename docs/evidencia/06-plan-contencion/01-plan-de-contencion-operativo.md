@@ -4,7 +4,7 @@ AIOps · Universidad ORT Uruguay · Juan Diego Fagnoni (288818), Federico Galuss
 
 Ítem 6 de la rúbrica. Se usa **en vivo** en el war-room. Sigue el ciclo **Prepare → Detect → Respond → Recover → Learn**.
 
-- Comandos: se corren en **Git Bash**, desde `Implementacion K8S/Codigo/k8s`, sobre el namespace `pharmago`.
+- Comandos: se corren en una terminal Bash o zsh, desde `Implementacion K8S/Codigo/k8s`, sobre el namespace `pharmago`.
 - Horas: Grafana y el registro van en hora local (UTC-3). `run-chaos.py` imprime **UTC** (la hora local más 3 h).
 - `Qn` = consulta PromQL y `Kn` = comando kubectl, los dos de la [sección 13](#13-referencia-rápida-consultas-y-comandos).
 
@@ -69,7 +69,7 @@ Corresponden a `requests`, `cpu`, `memory`, `storage`, `network` y `component` d
 | Kubernetes | Control plane en `pharmago` | — | — | — | Administra la ejecución, disponibilidad y recuperación de los contenedores |
 
 - **Cadena crítica:** UI → gateway → users / pharmacy → base.
-- **La base es el único punto único de falla de negocio.**
+- **SQL Server y su volumen `hostPath` son puntos únicos de falla de datos; la UI también tiene una sola réplica.**
 - Las 2 réplicas de cada microservicio **comparten nodo**. Toleran la caída de un pod, pero no la de su nodo.
 
 ---
@@ -160,7 +160,7 @@ Por eso la detección **no depende solo de las alertas**. El RO mira los paneles
 
 ## 5. Escalamiento y comunicación
 
-- **Canal único:** **Microsoft Teams**. Todo lo que se decide se dice en voz alta en la sala **y** queda en el registro. No se abren canales paralelos, para evitar acciones contradictorias.
+- **Canal principal:** reunión y chat de **Microsoft Teams**. Si Teams no está disponible, el IC pasa la coordinación a una llamada telefónica grupal. Las decisiones se comunican en el canal activo y quedan en el registro; no se coordinan acciones simultáneas por canales paralelos.
 - **Quién habla con los docentes:** el IC.
 - **Frecuencia de actualización:** según la SEV ([sección 3](#3-clasificación-de-incidentes)).
 - **Registro centralizado:** la plantilla de la [sección 9](#9-plantilla-de-registro-de-incidente). Campos: identificador, severidad, fecha y hora, componente afectado, impacto, acciones realizadas, estado y responsable.
@@ -245,6 +245,8 @@ Hay dos formas de inyectar caos:
 | Cortar la fuente (variante A u otro pod) | `kubectl delete pod <pod-origen> -n pharmago` | 🟢 |
 | Escalar el gateway | `kubectl scale deployment/pharmago-api-gateway -n pharmago --replicas=3` | 🟠 Las réplicas tienen afinidad con `pharmago-m03`: si no hay memoria, el pod queda `Pending`. Además sube el límite efectivo por IP (~300/min). Volver a 2 al cerrar. |
 | Ajustar los límites con un cambio controlado de configuración | `kubectl set env deployment/pharmago-api-gateway -n pharmago IpRateLimiting__GeneralRules__1__Limit=50`. Probado el 2026-11-14 con `=20`: 60 requests dieron 40 `200` y 20 `429`; al revertir, 60 `200` ([evidencia](01-prueba-ajuste-rate-limit.txt)). En modo `IP`, el límite que se aplica está en `IpRateLimiting.GeneralRules`, no en `RateLimiting.MaxRequestsPerMinute`. El índice `1` es la regla `*` por minuto (el `0` es la de login), y los `__` son la sintaxis de ASP.NET Core para pisar `appsettings.json` desde una variable de entorno. | 🟠 Provoca un rolling update. Cada réplica lleva su propio contador, así que el límite conjunto queda en ~2 × `<n>`. Revertir con `kubectl set env deployment/pharmago-api-gateway -n pharmago IpRateLimiting__GeneralRules__1__Limit-`. |
+
+El ajuste con `kubectl set env` es una contención temporal. Para cambiar la regla de forma permanente, editar `Backend/PharmaGo.ApiGateway/appsettings.json`, reconstruir la imagen del gateway y desplegarla con RollingUpdate.
 
 **Validación:**
 - Q2 vuelve a la línea base (~0.08 req/s por endpoint de negocio).
@@ -402,7 +404,7 @@ Hay dos formas de inyectar caos:
 **Validación:**
 - Q8 ya no muestra el pod de carga y el archivo está borrado.
 - *Disco disponible %* vuelve a su valor previo.
-- La app lee y escribe con normalidad (K8 contra `/api/drug` devuelve `200`).
+- K8 contra `/api/drug` devuelve `200` y confirma lectura del catálogo; si hubo errores de escritura, probar también la operación afectada con datos de prueba.
 - La alerta está en **Normal** y K3 vacío.
 
 **Severidad típica:** SEV3. Pasa a SEV2 si se desaloja un pod de la app o el nodo baja del 15 % libre. Pasa a SEV1 si está en riesgo el almacenamiento de la base.
@@ -458,7 +460,7 @@ Identificar qué comunicación está afectada y revisar los Services:
 - Si el circuit breaker se había abierto, Kibana muestra `Circuit breaker CERRADO para pharmacy-cluster`.
 
 **Severidad típica:**
-- SEV1 si fallan las compras por el gateway (Q1 > 25 % o K8 contra `/api/drug` distinto de `200`).
+- SEV1 si se confirma que el flujo de compras no funciona por el gateway. Q1 > 25 % o un fallo de K8 contra `/api/drug` orientan el diagnóstico, pero no sustituyen la prueba de compras.
 - SEV2 si solo falla el acceso directo al Service.
 
 ---
@@ -517,7 +519,7 @@ Otras variantes posibles: borrar pods, matar el proceso, o bajar `pharmago-users
 
 **Validación:**
 - K2 en `2/2` (la base en `1/1`).
-- K8 contra `/api/drug` y `/test-health` devuelve `200` y Q1 = 0.
+- K8 contra `/api/drug` y `/test-health` devuelve `200`, Q1 = 0 y se prueba la operación afectada (login o compra) con datos de prueba.
 - Kibana muestra `Circuit breaker CERRADO para pharmacy-cluster`.
 - K1 no muestra reinicios nuevos.
 
@@ -533,7 +535,7 @@ Un incidente se da por **resuelto** solo cuando se cumple **todo** esto:
 
 - [ ] Los componentes afectados están operativos y sus pods están `READY` (K1).
 - [ ] Los Deployments tienen las réplicas esperadas (K2: backend `2/2`, base y UI `1/1`).
-- [ ] Las funcionalidades principales responden: K8 contra `/api/drug` (compras y catálogo) y contra `/test-health` (users) devuelve `200`.
+- [ ] Las sondas básicas responden: K8 contra `/api/drug` (lectura del catálogo) y `/test-health` (salud de users) devuelve `200`. Si se afectó login o compras, verificar además la operación real de punta a punta con datos de prueba.
 - [ ] Las métricas volvieron a la línea base: Q1 = 0, latencia ~5 ms, CPU y memoria en sus valores previos.
 - [ ] No quedan errores del incidente: Kibana muestra `Circuit breaker CERRADO` si se había abierto, y no hay reintentos nuevos.
 - [ ] Las medidas temporales están revertidas: réplicas del gateway de vuelta en 2, variables de entorno quitadas, pods auxiliares y de caos borrados (K3 vacío).
@@ -671,7 +673,7 @@ Corridas registradas: [07-scripts-caos](../07-scripts-caos/) (los seis escenario
 
 ### 12.1 Roles
 
-Se confirman al empezar cada incidente ([sección 2](#2-roles-y-responsabilidades)). Por defecto: IC Federico Galusso · RT Juan Diego Fagnoni · RO Juan Pedro Michelini. Canal: Microsoft Teams.
+Se confirman al empezar cada incidente ([sección 2](#2-roles-y-responsabilidades)). Por defecto: IC Federico Galusso · RT Juan Diego Fagnoni · RO Juan Pedro Michelini. Canal principal: Microsoft Teams; alternativo: llamada telefónica grupal.
 
 ### 12.2 Qué tener abierto
 
@@ -712,7 +714,7 @@ Son 15 req/min, por debajo del rate limiting. Replica el tráfico de la [línea 
 | Sin restos de caos | K3 | `No resources found` |
 | Service de pharmacy | `kubectl get svc pharmago-pharmacy-service -n pharmago -o jsonpath='{.spec.ports[0].targetPort}'` | `80` |
 | Sin cambios respecto del repo | K6 | Sin diferencias (o solo anotaciones de `rollout restart`) |
-| Ruta de punta a punta | K8 con `/api/drug` y `/test-health` | `HTTP/1.1 200 OK` |
+| Rutas de comprobación básica | K8 con `/api/drug` y `/test-health` | `HTTP/1.1 200 OK` |
 | Errores | Q1 | 0 |
 | Alertas | Grafana → Alert rules | Las 7 en **Normal** |
 | metrics-server (para K7) | `kubectl top nodes` | Valores para los 5 nodos. Si da `Metrics API not available`, activar el addon: `minikube addons enable metrics-server -p pharmago` (tarda ~1 min en tener datos). Mientras tanto, usar Q6 y Q7. |

@@ -106,9 +106,9 @@ Hay dos documentos que se complementan:
 
 | Archivo | Qué muestra | Fecha |
 |---|---|---|
-| [01-plan-contencion-incidentes.pdf](06-plan-contencion/01-plan-contencion-incidentes.pdf) | Plan de contención con responsables, canal de comunicación, clasificación de severidad, procedimientos para los seis escenarios de caos y SQL Server, verificación, escalamiento y postmortem. | 2026-11-14 |
+| [01-plan-contencion-incidentes.pdf](06-plan-contencion/01-plan-contencion-incidentes.pdf) | Plan de contención con responsables, canal de comunicación, clasificación de severidad, procedimientos para los seis escenarios de caos y SQL Server, verificación, escalamiento y postmortem. | 2026-11-15 |
 | [01-prueba-ajuste-rate-limit.txt](06-plan-contencion/01-prueba-ajuste-rate-limit.txt) | Mitigación del runbook de pico de requests: bajar el límite del gateway con `kubectl set env` a 20/min. De 60 requests, 40 pasan y 20 reciben `429` (2 réplicas × 20). Al quitar la variable, vuelve a 60 de 60. | 2026-11-14 |
-| [01-plan-de-contencion-operativo.md](06-plan-contencion/01-plan-de-contencion-operativo.md) | Plan operativo para el war-room (ver arriba). | 2026-11-14 |
+| [01-plan-de-contencion-operativo.md](06-plan-contencion/01-plan-de-contencion-operativo.md) | Plan operativo para el war-room (ver arriba). | 2026-11-15 |
 
 ### 07 · Scripts de caos
 
