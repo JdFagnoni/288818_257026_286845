@@ -2,6 +2,12 @@
 
 [![CI/CD](https://github.com/JdFagnoni/288818_257026_286845/actions/workflows/ci-cd.yml/badge.svg?branch=main)](https://github.com/JdFagnoni/288818_257026_286845/actions/workflows/ci-cd.yml)
 
+## Entrega académica
+
+- [Informe final en PDF](docs/informe-final-aiops.pdf), con una sección por ítem de la rúbrica, resultados y limitaciones.
+- [Plan de contención de incidentes](docs/evidencia/06-plan-contencion/01-plan-contencion-incidentes.pdf) y [guía operativa para el war-room](docs/evidencia/06-plan-contencion/01-plan-de-contencion-operativo.md).
+- [Índice de evidencias](docs/evidencia/README.md) y [tablero Kanban de GitHub Projects](https://github.com/users/JdFagnoni/projects/1).
+
 ## CI/CD
 
 El pipeline está definido en [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) y corre en GitHub Actions.
@@ -17,6 +23,6 @@ El pipeline está definido en [`.github/workflows/ci-cd.yml`](.github/workflows/
 
 Las imágenes publicadas son `pharmago-api-gateway`, `pharmago-users-service`, `pharmago-pharmacy-service` y `pharmago-ui`, en `ghcr.io/jdfagnoni/<imagen>`, con dos tags: `sha-<commit>`, que identifica exactamente qué versión de `main` contiene, y `latest`.
 
-El análisis del ítem 5 está en [anomaly_detection](Implementacion%20K8S/Codigo/anomaly_detection/README.md). Incluye el notebook, un CLI para datasets CSV y métricas de Prometheus, y pruebas automatizadas. Los datasets docentes se incorporarán cuando estén disponibles.
+El análisis del ítem 5 está en [anomaly_detection](Implementacion%20K8S/Codigo/anomaly_detection/README.md). Incluye el notebook, un CLI para datasets CSV y métricas de Prometheus, pruebas automatizadas y el dataset sintético generado a partir del notebook docente.
 
 Para que un pull request no se pueda mergear con el pipeline en rojo, en *Settings → Branches* se agrega una regla para `main` con *Require status checks to pass before merging*, eligiendo los jobs del pipeline.

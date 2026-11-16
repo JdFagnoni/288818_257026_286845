@@ -677,10 +677,10 @@ Se confirman al empezar cada incidente ([sección 2](#2-roles-y-responsabilidade
 
 ### 12.2 Qué tener abierto
 
-- [ ] Terminal 1 (Git Bash, en `Implementacion K8S/Codigo/k8s`): `./port-forward.sh`.
+- [ ] Terminal 1 (Bash o zsh, en `Implementacion K8S/Codigo/k8s`): `./port-forward.sh`.
 - [ ] Terminal 2 (RT): `kubectl get pods -n pharmago -o wide -w`.
 - [ ] Terminal 3 (RT): libre para diagnóstico y mitigación.
-- [ ] Grafana http://127.0.0.1:3000 (usuario `admin`; la contraseña es la que configuró el equipo, no `admin`): *PharmaGo - Overview* y *PharmaGo - Infra*, rango `Last 15 minutes`, refresh `5s`.
+- [ ] Grafana http://127.0.0.1:3000 (usuario `admin`; verificar la contraseña vigente antes de la defensa): *PharmaGo - Overview* y *PharmaGo - Infra*, rango `Last 15 minutes`, refresh `5s`.
 - [ ] Grafana → Alerting → Alert rules → carpeta **PharmaGo** (7 reglas: 5 de infraestructura y 2 de servicio).
 - [ ] Prometheus http://127.0.0.1:9090 → Graph, con Q1, Q3 y Q6 cargadas en pestañas.
 - [ ] Kibana http://127.0.0.1:5601 → Discover: data view `pharmago-logs-*`, filtro `kubernetes.labels.app : "pharmago-api-gateway"`, últimos 15 min, auto-refresh.
@@ -704,6 +704,8 @@ done'
 Son 15 req/min, por debajo del rate limiting. Replica el tráfico de la [línea base](../00-linea-base/06-metricas-linea-base.txt).
 
 ### 12.3 Cluster sano antes de arrancar
+
+Después de iniciar Docker, ejecutar `minikube start -p pharmago` y `minikube update-context -p pharmago` antes de usar `kubectl`. El puerto local del API server puede cambiar al reiniciar Docker; no editarlo a mano en `kubeconfig`. Luego iniciar `./port-forward.sh` una sola vez para los accesos web.
 
 | Chequeo | Comando | Esperado |
 |---|---|---|
