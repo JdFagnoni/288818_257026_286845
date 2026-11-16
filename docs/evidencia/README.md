@@ -2,6 +2,8 @@
 
 Capturas y salidas de terminal que respaldan cada ítem de la rúbrica. Cada carpeta corresponde a un ítem y a su issue en el [tablero](https://github.com/users/JdFagnoni/projects/1).
 
+El [informe final en PDF](../informe-final-aiops.pdf) reúne los resultados, las limitaciones y las referencias de esta evidencia.
+
 | Carpeta | Contenido | Issue |
 |---|---|---|
 | `00-linea-base/` | Comportamiento normal del sistema, con tráfico liviano, antes de los cambios de telemetría, resiliencia y caos (ver abajo qué versión es) | [#12](https://github.com/JdFagnoni/288818_257026_286845/issues/12) |
@@ -106,9 +108,9 @@ Hay dos documentos que se complementan:
 
 | Archivo | Qué muestra | Fecha |
 |---|---|---|
-| [01-plan-contencion-incidentes.pdf](06-plan-contencion/01-plan-contencion-incidentes.pdf) | Plan de contención con responsables, canal de comunicación, clasificación de severidad, procedimientos para los seis escenarios de caos y SQL Server, verificación, escalamiento y postmortem. | 2026-11-15 |
+| [01-plan-contencion-incidentes.pdf](06-plan-contencion/01-plan-contencion-incidentes.pdf) | Plan de contención con responsables, canal de comunicación, clasificación de severidad, procedimientos para los seis escenarios de caos y SQL Server, verificación, escalamiento y postmortem. | 2026-11-16 |
 | [01-prueba-ajuste-rate-limit.txt](06-plan-contencion/01-prueba-ajuste-rate-limit.txt) | Mitigación del runbook de pico de requests: bajar el límite del gateway con `kubectl set env` a 20/min. De 60 requests, 40 pasan y 20 reciben `429` (2 réplicas × 20). Al quitar la variable, vuelve a 60 de 60. | 2026-11-14 |
-| [01-plan-de-contencion-operativo.md](06-plan-contencion/01-plan-de-contencion-operativo.md) | Plan operativo para el war-room (ver arriba). | 2026-11-15 |
+| [01-plan-de-contencion-operativo.md](06-plan-contencion/01-plan-de-contencion-operativo.md) | Plan operativo para el war-room (ver arriba), con la secuencia de arranque de Minikube tras reiniciar Docker. | 2026-11-16 |
 
 ### 07 · Scripts de caos
 
@@ -126,3 +128,4 @@ Pipeline: [.github/workflows/ci-cd.yml](../../.github/workflows/ci-cd.yml).
 | Archivo | Qué muestra | Fecha |
 |---|---|---|
 | [01-pipeline-ci-cd-main.png](09-herramientas/01-pipeline-ci-cd-main.png) | Corrida del pipeline CI/CD sobre `main` al mergear el PR #22: los 11 checks en verde (backend con los 291 tests, frontend, manifiestos de Kubernetes, build de las 4 imágenes y su publicación en GitHub Container Registry). A la derecha se ven los 4 paquetes publicados. | 2026-10-22 |
+| [02-tablero-kanban-github-projects.png](09-herramientas/02-tablero-kanban-github-projects.png) | Captura del tablero Kanban de GitHub Projects con las columnas Todo, In Progress, In Review y Done y los issues del obligatorio. Permite consultar la evidencia aunque el proyecto privado no sea accesible al docente. | 2026-11-16 |
